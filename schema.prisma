@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  nombre        String
+  email         String         @unique
+  password      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+  cursos        Enrollment[]
+}
+
+model Course {
+  id                Int          @id @default(autoincrement())
+  titulo            String
+  descripcion       String
+  descripcion_larga String?
+  objetivos         String?
+  contenido_programa String?
+  requisitos        String?
+  nivel             String?
+  duracion          String?
+  materiales        String?
+  beneficios        String?
+  instructor        String
+  instructor_bio    String?
+  modulos           String?
+  categoria         String
+  precio            Int
+  imagen            String?
+  ciudad            String?
+  lat               Float?
+  lng               Float?
+  modalidad         String?
+  direccion         String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  alumnos           Enrollment[]
+}
+
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  user      User     @relation(fields: [userId], references: [id])
+  course    Course   @relation(fields: [courseId], references: [id])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
