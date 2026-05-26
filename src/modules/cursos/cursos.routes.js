@@ -7,6 +7,7 @@ router.get("/", listar);
 router.get("/:id", obtener);
 router.post("/", crear);
 router.put("/:id", actualizar);
+router.patch("/:id", actualizar);
 router.delete("/:id", eliminar);
 
 export default router;

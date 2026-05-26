@@ -2,8 +2,11 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const COURSE_FIELDS = [
-  "titulo", "descripcion", "categoria", "precio",
-  "instructor", "imagen", "ciudad", "lat", "lng",
+  "titulo", "descripcion", "descripcion_larga", "objetivos",
+  "contenido_programa", "requisitos", "nivel", "duracion",
+  "materiales", "beneficios", "instructor", "instructor_bio",
+  "modulos", "categoria", "precio",
+  "imagen", "ciudad", "lat", "lng",
   "modalidad", "direccion",
 ];
 
