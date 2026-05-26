@@ -8,50 +8,88 @@ datasource db {
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  nombre        String
-  email         String         @unique
-  password      String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
-  cursos        Enrollment[]
+  id               Int              @id @default(autoincrement())
+  nombre           String
+  email            String           @unique
+  password         String
+  role             String           @default("STUDENT")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  refreshTokens    RefreshToken[]
+  matriculas       Enrollment[]
+  compras          Venta[]          @relation("VentaComprador")
+  misVentas        Venta[]          @relation("VentaInstructor")
+  cursosCreados    Course[]
+  saldo            InstructorSaldo?
 }
 
 model Course {
-  id                Int          @id @default(autoincrement())
-  titulo            String
-  descripcion       String
-  descripcion_larga String?
-  objetivos         String?
+  id                 Int          @id @default(autoincrement())
+  titulo             String
+  descripcion        String
+  descripcion_larga  String?
+  objetivos          String?
   contenido_programa String?
-  requisitos        String?
-  nivel             String?
-  duracion          String?
-  materiales        String?
-  beneficios        String?
-  instructor        String
-  instructor_bio    String?
-  modulos           String?
-  categoria         String
-  precio            Int
-  imagen            String?
-  ciudad            String?
-  lat               Float?
-  lng               Float?
-  modalidad         String?
-  direccion         String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  alumnos           Enrollment[]
+  requisitos         String?
+  nivel              String?
+  duracion           String?
+  materiales         String?
+  beneficios         String?
+  instructor         String
+  instructor_bio     String?
+  instructorUserId   Int?
+  instructorUser     User?        @relation(fields: [instructorUserId], references: [id])
+  modulos            String?
+  categoria          String
+  precio             Int
+  imagen             String?
+  ciudad             String?
+  lat                Float?
+  lng                Float?
+  modalidad          String?
+  direccion          String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  alumnos            Enrollment[]
+  ventas             Venta[]
 }
 
 model Enrollment {
   id        Int      @id @default(autoincrement())
   userId    Int
   courseId  Int
+  createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   course    Course   @relation(fields: [courseId], references: [id])
+}
+
+model Venta {
+  id                 Int      @id @default(autoincrement())
+  flowToken          String   @unique
+  flowOrder          String   @unique
+  userId             Int
+  courseId           Int
+  instructorUserId   Int?
+  monto              Int
+  comisionPlataforma Int
+  pagoInstructor     Int
+  estado             String   @default("PENDIENTE")
+  flowData           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation("VentaComprador", fields: [userId], references: [id])
+  course             Course   @relation(fields: [courseId], references: [id])
+  instructorUser     User?    @relation("VentaInstructor", fields: [instructorUserId], references: [id])
+}
+
+model InstructorSaldo {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @unique
+  saldoPendiente   Int      @default(0)
+  saldoAcumulado   Int      @default(0)
+  saldoPagado      Int      @default(0)
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id])
 }
 
 model RefreshToken {
