@@ -143,7 +143,7 @@ curl -X POST https://TU_URL_RAILWAY/api/v1/cursos \
 | createdAt | DateTime | Sí |
 | updatedAt | DateTime | Sí |
 
-## Migraciones
+## Migraciones.
 
 La migración inicial está en `prisma/migrations/20250526000000_init/`.
 
