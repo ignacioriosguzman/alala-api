@@ -5,14 +5,25 @@ import { generateAccessToken, generateRefreshToken } from "../../utils/tokens.js
 const prisma = new PrismaClient();
 
 export const registerUser = async (data) => {
+  const existe = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existe) throw new Error("Este email ya está registrado");
   const hashed = await bcrypt.hash(data.password, 10);
+  return prisma.user.create({
+    data: { nombre: data.nombre, email: data.email, password: hashed }
+  });
+};
 
+export const registerInstructor = async (data) => {
+  const existe = await prisma.user.findUnique({ where: { email: data.email } });
+  if (existe) throw new Error("Este email ya está registrado");
+  const hashed = await bcrypt.hash(data.password, 10);
   return prisma.user.create({
     data: {
       nombre: data.nombre,
       email: data.email,
-      password: hashed
-    }
+      password: hashed,
+      role: "INSTRUCTOR",
+    },
   });
 };
 

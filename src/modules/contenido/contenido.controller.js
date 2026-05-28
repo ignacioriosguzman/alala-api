@@ -1,0 +1,98 @@
+import {
+  createContenido,
+  listarCatalogo,
+  getContenidoById,
+  listarMisContenidos,
+  updateContenido,
+  cambiarStatus,
+  deleteContenido,
+  upsellRecomendaciones,
+} from "./contenido.service.js";
+
+const handleError = (error, res) => {
+  if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
+    console.error('[Contenido] Error de Prisma:', error.message);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+  res.status(400).json({ error: error.message });
+};
+
+export const crear = async (req, res) => {
+  try {
+    const contenido = await createContenido(req.body, req.user.id);
+    res.status(201).json(contenido);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const catalogo = async (req, res) => {
+  try {
+    const contenidos = await listarCatalogo(req.query);
+    res.json(contenidos);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const obtener = async (req, res) => {
+  try {
+    const contenido = await getContenidoById(req.params.id);
+    if (!contenido || contenido.status !== "activo") {
+      return res.status(404).json({ error: "Contenido no encontrado" });
+    }
+    res.json(contenido);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const misContenidos = async (req, res) => {
+  try {
+    const contenidos = await listarMisContenidos(req.user.id);
+    res.json(contenidos);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const editar = async (req, res) => {
+  try {
+    const contenido = await updateContenido(req.params.id, req.body, req.user.id);
+    res.json(contenido);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const cambiarEstado = async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status || !["borrador", "activo", "pausado"].includes(status)) {
+      return res.status(400).json({ error: "Status inválido" });
+    }
+    const contenido = await cambiarStatus(req.params.id, status, req.user.id);
+    res.json(contenido);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const eliminar = async (req, res) => {
+  try {
+    await deleteContenido(req.params.id, req.user.id);
+    res.json({ message: "Contenido eliminado" });
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const upsell = async (req, res) => {
+  try {
+    const limit = req.query.limit ? Number(req.query.limit) : 3;
+    const recomendaciones = await upsellRecomendaciones(req.params.id, limit);
+    res.json(recomendaciones);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
