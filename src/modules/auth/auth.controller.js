@@ -50,21 +50,15 @@ export const registrarInstructor = async (req, res) => {
   try {
     const { user, verificationToken } = await registerInstructor(req.body);
 
-    const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(verificationToken)}`;
-    try {
-      await enviarEmailVerificacionInstructor({
-        email: user.email,
-        nombre: user.nombre,
-        confirmUrl,
-      });
-    } catch (emailErr) {
-      console.error('[auth] Error enviando email de verificación:', emailErr.message);
-    }
-
+    // Responder inmediatamente — envío de email en background
     res.status(201).json({
       message: "Instructor registrado. Revisa tu correo para confirmar tu cuenta.",
       user: userPublic(user),
     });
+
+    const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(verificationToken)}`;
+    enviarEmailVerificacionInstructor({ email: user.email, nombre: user.nombre, confirmUrl })
+      .catch(err => console.error('[auth] Error enviando email de verificación:', err.message));
   } catch (error) {
     handleAuthError(error, res);
   }
@@ -124,20 +118,15 @@ export const forgotPassword = async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email requerido' });
 
     const result = await generarTokenReset(email);
+
+    // Responder inmediatamente — no bloquear esperando al servidor SMTP
+    res.json({ message: 'Si el correo está registrado, recibirás un enlace de recuperación.' });
+
     if (result) {
       const resetUrl = `${FRONTEND}/reset-password.html?id=${result.user.id}&token=${encodeURIComponent(result.token)}`;
-      try {
-        await enviarEmailRecuperacion({
-          email: result.user.email,
-          nombre: result.user.nombre,
-          resetUrl,
-        });
-      } catch (emailErr) {
-        console.error('[auth] Error enviando email de recuperación:', emailErr.message);
-      }
+      enviarEmailRecuperacion({ email: result.user.email, nombre: result.user.nombre, resetUrl })
+        .catch(err => console.error('[auth] Error enviando email de recuperación:', err.message));
     }
-
-    res.json({ message: 'Si el correo está registrado, recibirás un enlace de recuperación.' });
   } catch (error) {
     handleAuthError(error, res);
   }
@@ -177,21 +166,14 @@ export const reenviar = async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email requerido' });
 
     const result = await reenviarConfirmacion(email);
+    // Responder inmediatamente — envío en background
+    res.json({ message: 'Si el correo corresponde a una cuenta de instructor pendiente, recibirás el enlace de confirmación.' });
+
     if (result) {
       const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(result.verificationToken)}`;
-      try {
-        await enviarEmailVerificacionInstructor({
-          email: result.user.email,
-          nombre: result.user.nombre,
-          confirmUrl,
-        });
-      } catch (emailErr) {
-        console.error('[auth] Error reenviando email de verificación:', emailErr.message);
-      }
+      enviarEmailVerificacionInstructor({ email: result.user.email, nombre: result.user.nombre, confirmUrl })
+        .catch(err => console.error('[auth] Error reenviando email de verificación:', err.message));
     }
-
-    // Respuesta genérica para no revelar si el email existe
-    res.json({ message: 'Si el correo corresponde a una cuenta de instructor pendiente, recibirás el enlace de confirmación.' });
   } catch (error) {
     handleAuthError(error, res);
   }
