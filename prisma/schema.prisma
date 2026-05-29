@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int                @id @default(autoincrement())
+  nombre            String
+  email             String             @unique
+  password          String
+  role              String             @default("STUDENT")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  refreshTokens     RefreshToken[]
+  matriculas        Enrollment[]
+  compras           Venta[]            @relation("VentaComprador")
+  misVentas         Venta[]            @relation("VentaInstructor")
+  cursosCreados     Course[]
+  saldo             InstructorSaldo?
+  reviews           Review[]
+  favorites         Favorite[]
+  contenidosCreados ContenidoDigital[]
+  comprasContenido  CompraContenido[]
+  resenasContenido  ResenaContenido[]
+  microContenidos   MicroContenido[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Course {
+  id                 Int          @id @default(autoincrement())
+  titulo             String
+  descripcion        String
+  descripcion_larga  String?
+  objetivos          String?
+  contenido_programa String?
+  requisitos         String?
+  nivel              String?
+  duracion           String?
+  materiales         String?
+  beneficios         String?
+  instructor         String
+  instructor_bio     String?
+  instructorUserId   Int?
+  instructorUser     User?        @relation(fields: [instructorUserId], references: [id])
+  modulos            String?
+  categoria          String
+  precio             Int
+  imagen             String?
+  ciudad             String?
+  lat                Float?
+  lng                Float?
+  modalidad          String?
+  direccion          String?
+  fechaInicio        DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  alumnos            Enrollment[]
+  ventas             Venta[]
+  reviews            Review[]
+  favorites          Favorite[]
+  mensajes           Mensaje[]
+
+  @@index([categoria])
+  @@index([instructorUserId])
+  @@index([createdAt])
+}
+
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  course    Course   @relation(fields: [courseId], references: [id])
+}
+
+model Venta {
+  id                 Int      @id @default(autoincrement())
+  flowToken          String   @unique
+  flowOrder          String   @unique
+  userId             Int
+  courseId           Int
+  instructorUserId   Int?
+  monto              Int
+  comisionPlataforma Int
+  pagoInstructor     Int
+  estado             String   @default("PENDIENTE")
+  flowData           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation("VentaComprador", fields: [userId], references: [id])
+  course             Course   @relation(fields: [courseId], references: [id])
+  instructorUser     User?    @relation("VentaInstructor", fields: [instructorUserId], references: [id])
+}
+
+model InstructorSaldo {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+  saldoPendiente Int      @default(0)
+  saldoAcumulado Int      @default(0)
+  saldoPagado    Int      @default(0)
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  cursoId    Int
+  userId     Int
+  rating     Int
+  comentario String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  curso      Course   @relation(fields: [cursoId], references: [id])
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  courseId  Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  curso     Course   @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+model EventoAnalitico {
+  id        Int      @id @default(autoincrement())
+  tipo      String
+  cursoId   Int?
+  userId    Int?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model Mensaje {
+  id             Int      @id @default(autoincrement())
+  cursoId        Int
+  remitenteId    Int
+  destinatarioId Int
+  texto          String
+  leido          Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  curso          Course   @relation(fields: [cursoId], references: [id])
+}
+
+model ContenidoDigital {
+  id                 Int                 @id @default(autoincrement())
+  titulo             String
+  descripcion        String
+  descripcionLarga   String?
+  tipo               String // "microcurso" | "manual"
+  categoria          String
+  subcategoria       String?
+  precio             Int
+  precioOferta       Int?
+  portadaUrl         String?
+  pdfUrl             String?
+  previewUrls        String[] // URLs de imágenes de preview (3 páginas)
+  paginas            Int?
+  tamanoMb           Float?
+  idioma             String              @default("es")
+  nivel              String? // principiante | intermedio | avanzado | todos
+  creatorId          Int
+  creator            User                @relation(fields: [creatorId], references: [id])
+  status             String              @default("borrador") // borrador | activo | pausado
+  comisionPct        Float               @default(12.0)
+  ventas             Int                 @default(0)
+  rating             Float               @default(0)
+  reviews            Int                 @default(0)
+  indice             String? // JSON string con array de capítulos/secciones
+  palabrasClave      String[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  compras            CompraContenido[]
+  resenas            ResenaContenido[]
+  comprasInvitado    CompraInvitado[]
+  progresos          ProgresoLectura[]
+  favoritesContenido FavoriteContenido[]
+
+  @@index([tipo])
+  @@index([categoria])
+  @@index([creatorId])
+  @@index([status])
+}
+
+model CompraContenido {
+  id                 Int              @id @default(autoincrement())
+  contenidoId        Int
+  contenido          ContenidoDigital @relation(fields: [contenidoId], references: [id])
+  userId             Int
+  user               User             @relation(fields: [userId], references: [id])
+  monto              Int
+  comisionPlataforma Int
+  pagoCreador        Int
+  estado             String           @default("completada") // completada | reembolsada
+  downloadUrl        String?
+  createdAt          DateTime         @default(now())
+
+  @@unique([userId, contenidoId])
+}
+
+model ResenaContenido {
+  id          Int              @id @default(autoincrement())
+  contenidoId Int
+  contenido   ContenidoDigital @relation(fields: [contenidoId], references: [id])
+  userId      Int
+  user        User             @relation(fields: [userId], references: [id])
+  rating      Int
+  comentario  String
+  createdAt   DateTime         @default(now())
+}
+
+model Cupon {
+  id              Int              @id @default(autoincrement())
+  codigo          String           @unique
+  creatorId       Int
+  contenidoId     Int? // null = aplica a todo el catálogo del creador
+  descuentoPct    Int // ej: 20 = 20%
+  usosMaximos     Int              @default(100)
+  usosActuales    Int              @default(0)
+  activo          Boolean          @default(true)
+  fechaExpiracion DateTime?
+  createdAt       DateTime         @default(now())
+  comprasInvitado CompraInvitado[]
+}
+
+model CompraInvitado {
+  id                 Int              @id @default(autoincrement())
+  email              String
+  nombre             String?
+  contenidoId        Int
+  contenido          ContenidoDigital @relation(fields: [contenidoId], references: [id])
+  monto              Int
+  comisionPlataforma Int
+  pagoCreador        Int
+  cuponId            Int?
+  cupon              Cupon?           @relation(fields: [cuponId], references: [id])
+  estado             String           @default("completada")
+  downloadUrl        String?
+  createdAt          DateTime         @default(now())
+}
+
+model ProgresoLectura {
+  id                 Int               @id @default(autoincrement())
+  userId             Int?
+  emailInvitado      String?
+  contenidoId        Int
+  paginaActual       Int               @default(1)
+  porcentaje         Float             @default(0)
+  updatedAt          DateTime          @updatedAt
+  ContenidoDigital   ContenidoDigital? @relation(fields: [contenidoDigitalId], references: [id])
+  contenidoDigitalId Int?
+
+  @@unique([userId, contenidoId])
+  @@unique([emailInvitado, contenidoId])
+}
+
+model FavoriteContenido {
+  id                 Int               @id @default(autoincrement())
+  userId             Int
+  contenidoId        Int
+  createdAt          DateTime          @default(now())
+  ContenidoDigital   ContenidoDigital? @relation(fields: [contenidoDigitalId], references: [id])
+  contenidoDigitalId Int?
+
+  @@unique([userId, contenidoId])
+}
+
+// ═══════════════════════════════════════════════════════════
+// MÓDULO MICROCONTENIDOS
+// ═══════════════════════════════════════════════════════════
+
+model MicroContenido {
+  id            Int      @id @default(autoincrement())
+  titulo        String
+  descripcion   String?
+  contenido     String   // texto completo del manual, instructivo o microtexto
+  tipo          String   // "microtexto" | "manual" | "instructivo" | "minicurso"
+  autorId       Int
+  autor         User     @relation(fields: [autorId], references: [id])
+  precio        Int?     // null = gratuito
+  comisionPct   Int      @default(20) // % comisión plataforma
+  publicado     Boolean  @default(true)
+  portadaUrl    String?
+  categoria     String   @default("General")
+  palabrasClave String[]
+  paginas       Int?
+  lecturaMin    Int?     // tiempo estimado de lectura en minutos
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  compras         CompraMicroContenido[]
+  resenas         ResenaMicroContenido[]
+  favoritos       FavoriteMicroContenido[]
+  progresos       ProgresoMicroContenido[]
+
+  @@index([tipo])
+  @@index([categoria])
+  @@index([autorId])
+  @@index([publicado])
+}
+
+model CompraMicroContenido {
+  id                 Int             @id @default(autoincrement())
+  microContenidoId   Int
+  microContenido     MicroContenido  @relation(fields: [microContenidoId], references: [id])
+  userId             Int?
+  emailInvitado      String?
+  monto              Int
+  comisionPlataforma Int
+  pagoCreador        Int
+  estado             String          @default("completada")
+  downloadUrl        String?
+  createdAt          DateTime        @default(now())
+
+  @@unique([userId, microContenidoId])
+  @@unique([emailInvitado, microContenidoId])
+}
+
+model ResenaMicroContenido {
+  id               Int            @id @default(autoincrement())
+  microContenidoId Int
+  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id])
+  userId           Int
+  rating           Int
+  comentario       String
+  createdAt        DateTime       @default(now())
+}
+
+model FavoriteMicroContenido {
+  id               Int            @id @default(autoincrement())
+  userId           Int
+  microContenidoId Int
+  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id])
+  createdAt        DateTime       @default(now())
+
+  @@unique([userId, microContenidoId])
+}
+
+model ProgresoMicroContenido {
+  id               Int            @id @default(autoincrement())
+  userId           Int?
+  emailInvitado    String?
+  microContenidoId Int
+  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id])
+  porcentaje       Float          @default(0)
+  leidoCompleto    Boolean        @default(false)
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([userId, microContenidoId])
+  @@unique([emailInvitado, microContenidoId])
+}
