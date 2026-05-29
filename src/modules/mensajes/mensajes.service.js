@@ -1,5 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from "../../lib/prisma.js";
+
+
 
 export const createMensaje = async (data) => {
   return prisma.mensaje.create({

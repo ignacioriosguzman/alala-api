@@ -1,6 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../lib/prisma.js";
+
 import { validarCupon } from "../cupones/cupones.service.js";
-const prisma = new PrismaClient();
+
 
 export const comprarContenido = async (userId, contenidoId) => {
   const contenido = await prisma.contenidoDigital.findUnique({
@@ -25,27 +26,29 @@ export const comprarContenido = async (userId, contenidoId) => {
   const comisionPlataforma = Math.round(monto * (contenido.comisionPct / 100));
   const pagoCreador = monto - comisionPlataforma;
 
-  const compra = await prisma.compraContenido.create({
-    data: {
-      contenidoId: Number(contenidoId),
-      userId: Number(userId),
-      monto,
-      comisionPlataforma,
-      pagoCreador,
-      estado: "completada",
-      downloadUrl: contenido.pdfUrl,
-    },
-    include: {
-      contenido: { select: { titulo: true, portadaUrl: true } },
-    },
-  });
+  return prisma.$transaction(async (tx) => {
+    const compra = await tx.compraContenido.create({
+      data: {
+        contenidoId: Number(contenidoId),
+        userId: Number(userId),
+        monto,
+        comisionPlataforma,
+        pagoCreador,
+        estado: "completada",
+        downloadUrl: contenido.pdfUrl,
+      },
+      include: {
+        contenido: { select: { titulo: true, portadaUrl: true } },
+      },
+    });
 
-  await prisma.contenidoDigital.update({
-    where: { id: Number(contenidoId) },
-    data: { ventas: { increment: 1 } },
-  });
+    await tx.contenidoDigital.update({
+      where: { id: Number(contenidoId) },
+      data: { ventas: { increment: 1 } },
+    });
 
-  return compra;
+    return compra;
+  });
 };
 
 export const listarMisDescargas = (userId) => {
@@ -151,37 +154,39 @@ export const comprarContenidoInvitado = async (email, nombre, contenidoId, cupon
   const comisionPlataforma = Math.round(monto * (contenido.comisionPct / 100));
   const pagoCreador = monto - comisionPlataforma;
 
-  const compra = await prisma.compraInvitado.create({
-    data: {
-      email: String(email).trim().toLowerCase(),
-      nombre: nombre ? String(nombre).trim() : null,
-      contenidoId: Number(contenidoId),
-      monto,
-      comisionPlataforma,
-      pagoCreador,
-      cuponId,
-      estado: "completada",
-      downloadUrl: contenido.pdfUrl,
-    },
-    include: {
-      contenido: { select: { titulo: true, portadaUrl: true } },
-      cupon: { select: { codigo: true, descuentoPct: true } },
-    },
-  });
-
-  await prisma.contenidoDigital.update({
-    where: { id: Number(contenidoId) },
-    data: { ventas: { increment: 1 } },
-  });
-
-  if (cuponId) {
-    await prisma.cupon.update({
-      where: { id: cuponId },
-      data: { usosActuales: { increment: 1 } },
+  return prisma.$transaction(async (tx) => {
+    const compra = await tx.compraInvitado.create({
+      data: {
+        email: String(email).trim().toLowerCase(),
+        nombre: nombre ? String(nombre).trim() : null,
+        contenidoId: Number(contenidoId),
+        monto,
+        comisionPlataforma,
+        pagoCreador,
+        cuponId,
+        estado: "completada",
+        downloadUrl: contenido.pdfUrl,
+      },
+      include: {
+        contenido: { select: { titulo: true, portadaUrl: true } },
+        cupon: { select: { codigo: true, descuentoPct: true } },
+      },
     });
-  }
 
-  return { compra, downloadUrl: contenido.pdfUrl };
+    await tx.contenidoDigital.update({
+      where: { id: Number(contenidoId) },
+      data: { ventas: { increment: 1 } },
+    });
+
+    if (cuponId) {
+      await tx.cupon.update({
+        where: { id: cuponId },
+        data: { usosActuales: { increment: 1 } },
+      });
+    }
+
+    return { compra, downloadUrl: contenido.pdfUrl };
+  });
 };
 
 export const comprarBundle = async (userId, contenidoIds) => {
@@ -212,38 +217,39 @@ export const comprarBundle = async (userId, contenidoIds) => {
     return pa - pb;
   });
 
-  const compras = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const c = sorted[i];
-    const base = c.precioOferta ?? c.precio;
-    const monto = i === 0 ? 0 : base;
-    const comisionPlataforma = Math.round(monto * (c.comisionPct / 100));
-    const pagoCreador = monto - comisionPlataforma;
+  return prisma.$transaction(async (tx) => {
+    const compras = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const c = sorted[i];
+      const base = c.precioOferta ?? c.precio;
+      const monto = i === 0 ? 0 : base;
+      const comisionPlataforma = Math.round(monto * (c.comisionPct / 100));
+      const pagoCreador = monto - comisionPlataforma;
 
-    const compra = await prisma.compraContenido.create({
-      data: {
-        contenidoId: c.id,
-        userId: Number(userId),
-        monto,
-        comisionPlataforma,
-        pagoCreador,
-        estado: "completada",
-        downloadUrl: c.pdfUrl,
-      },
-      include: {
-        contenido: { select: { titulo: true, portadaUrl: true } },
-      },
-    });
+      const compra = await tx.compraContenido.create({
+        data: {
+          contenidoId: c.id,
+          userId: Number(userId),
+          monto,
+          comisionPlataforma,
+          pagoCreador,
+          estado: "completada",
+          downloadUrl: c.pdfUrl,
+        },
+        include: {
+          contenido: { select: { titulo: true, portadaUrl: true } },
+        },
+      });
 
-    await prisma.contenidoDigital.update({
-      where: { id: c.id },
-      data: { ventas: { increment: 1 } },
-    });
+      await tx.contenidoDigital.update({
+        where: { id: c.id },
+        data: { ventas: { increment: 1 } },
+      });
 
-    compras.push(compra);
-  }
-
-  return compras;
+      compras.push(compra);
+    }
+    return compras;
+  });
 };
 
 export const comprarBundleInvitado = async (email, nombre, contenidoIds) => {
@@ -267,39 +273,40 @@ export const comprarBundleInvitado = async (email, nombre, contenidoIds) => {
     return pa - pb;
   });
 
-  const compras = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const c = sorted[i];
-    const base = c.precioOferta ?? c.precio;
-    const monto = i === 0 ? 0 : base;
-    const comisionPlataforma = Math.round(monto * (c.comisionPct / 100));
-    const pagoCreador = monto - comisionPlataforma;
+  return prisma.$transaction(async (tx) => {
+    const compras = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const c = sorted[i];
+      const base = c.precioOferta ?? c.precio;
+      const monto = i === 0 ? 0 : base;
+      const comisionPlataforma = Math.round(monto * (c.comisionPct / 100));
+      const pagoCreador = monto - comisionPlataforma;
 
-    const compra = await prisma.compraInvitado.create({
-      data: {
-        email: String(email).trim().toLowerCase(),
-        nombre: nombre ? String(nombre).trim() : null,
-        contenidoId: c.id,
-        monto,
-        comisionPlataforma,
-        pagoCreador,
-        estado: "completada",
-        downloadUrl: c.pdfUrl,
-      },
-      include: {
-        contenido: { select: { titulo: true, portadaUrl: true } },
-      },
-    });
+      const compra = await tx.compraInvitado.create({
+        data: {
+          email: String(email).trim().toLowerCase(),
+          nombre: nombre ? String(nombre).trim() : null,
+          contenidoId: c.id,
+          monto,
+          comisionPlataforma,
+          pagoCreador,
+          estado: "completada",
+          downloadUrl: c.pdfUrl,
+        },
+        include: {
+          contenido: { select: { titulo: true, portadaUrl: true } },
+        },
+      });
 
-    await prisma.contenidoDigital.update({
-      where: { id: c.id },
-      data: { ventas: { increment: 1 } },
-    });
+      await tx.contenidoDigital.update({
+        where: { id: c.id },
+        data: { ventas: { increment: 1 } },
+      });
 
-    compras.push(compra);
-  }
-
-  return compras;
+      compras.push(compra);
+    }
+    return compras;
+  });
 };
 
 export const guardarProgreso = async (userId, emailInvitado, contenidoId, paginaActual, totalPaginas) => {

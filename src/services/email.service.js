@@ -86,6 +86,25 @@ export async function enviarEmailBienvenidaInstructor({ email, nombre }) {
   return send({ to: email, subject: "Bienvenido a ALALA como instructor", html });
 }
 
+export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px">
+      <h2 style="color:#D4705A">Recupera tu contraseña</h2>
+      <p>Hola ${nombre},</p>
+      <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en ALALA.</p>
+      <p style="margin:24px 0">
+        <a href="${resetUrl}" style="background:#D4705A;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">
+          Restablecer contraseña
+        </a>
+      </p>
+      <p style="color:#999;font-size:.85rem">Este enlace expira en 1 hora. Si no solicitaste este cambio, ignora este correo.</p>
+      <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+      <p style="color:#999;font-size:.75rem">ALALA Chile · <a href="https://alala.cl" style="color:#D4705A">alala.cl</a></p>
+    </div>
+  `;
+  return send({ to: email, subject: 'Recupera tu contraseña de ALALA', html });
+}
+
 export async function enviarEmailRecordatorio({
   email,
   nombre,

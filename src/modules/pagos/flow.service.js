@@ -60,3 +60,16 @@ export async function obtenerEstadoPago(token) {
   });
   // status: 1=pendiente, 2=pagado, 3=rechazado, 4=anulado
 }
+
+// Validar firma de webhook de Flow
+export function validarFirmaFlow(payload) {
+  const { s, ...params } = payload;
+  if (!s) return false;
+  const expected = firmar(params);
+  // Timing-safe comparison para prevenir timing attacks
+  try {
+    return crypto.timingSafeEqual(Buffer.from(s, 'hex'), Buffer.from(expected, 'hex'));
+  } catch {
+    return false;
+  }
+}

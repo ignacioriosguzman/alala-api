@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
 import authRoutes from "./modules/auth/auth.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
 import cursosRoutes from "./modules/cursos/cursos.routes.js";
@@ -19,11 +20,14 @@ import comprasRoutes from "./modules/compras/compras.routes.js";
 import cuponesRoutes from "./modules/cupones/cupones.routes.js";
 import reseñasRoutes from "./modules/reseñas/reseñas.routes.js";
 import uploadRoutes from "./modules/upload/upload.routes.js";
+import microcontenidosRoutes from "./modules/microcontenidos/microcontenidos.routes.js";
+import creadorRoutes from "./modules/creador/creador.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ── Headers de seguridad ───────────────────────────────────────────
 app.use((req, res, next) => {
@@ -32,50 +36,70 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  // CSP permisiva pero segura: permite inline scripts/styles del frontend estático
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  // CSP específica para API REST: no sirve HTML, bloquea todo lo innecesario
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://images.unsplash.com; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "img-src 'self' data: https: blob:; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
-    "connect-src 'self' https://alala-api-production.up.railway.app https://api.alala.cl; " +
+    "default-src 'none'; " +
     "frame-ancestors 'none';"
   );
   next();
 });
 
+// ── Rate limiting ──────────────────────────────────────────────────
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Intenta más tarde.' },
+});
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de autenticación. Intenta más tarde.' },
+});
+app.use(generalLimiter);
+
 app.use(cors({
   origin: ['https://alala.cl', 'https://app.alala.cl'],
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // para webhook de Flow
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-app.get("/health", (req, res) => res.json({ status: "ok", service: "ALALA API" }));
+app.get("/health", (req, res) => res.json({ status: "ok", service: "ALALA API", env: process.env.FLOW_ENV || 'sandbox' }));
 
-app.use("/auth", authRoutes);
-app.use("/usuarios", usuariosRoutes);
-app.use("/cursos", cursosRoutes);
-app.use("/pagos", pagosRoutes);
-app.use("/", ventasRoutes);
-app.use("/instructor", instructorRoutes);
-app.use("/email", emailRoutes);
-app.use("/geocode", geocodingRoutes);
+const v1 = express.Router();
+v1.use("/auth", authLimiter, authRoutes);
+v1.use("/usuarios", usuariosRoutes);
+v1.use("/cursos", cursosRoutes);
+v1.use("/pagos", pagosRoutes);
+v1.use("/ventas", ventasRoutes);
+v1.use("/instructor", instructorRoutes);
+v1.use("/email", emailRoutes);
+v1.use("/sitemap", sitemapRoutes);
+v1.use("/geocode", geocodingRoutes);
+v1.use("/reviews", reviewRoutes);
+v1.use("/favorites", favoriteRoutes);
+v1.use("/analytics", analyticsRoutes);
+v1.use("/mensajes", mensajesRoutes);
+v1.use("/contenido", contenidoRoutes);
+v1.use("/compras", comprasRoutes);
+v1.use("/cupones", cuponesRoutes);
+v1.use("/reseñas-contenido", reseñasRoutes);
+v1.use("/upload", uploadRoutes);
+v1.use("/microcontenidos", microcontenidosRoutes);
+v1.use("/creador", creadorRoutes);
+app.use("/api/v1", v1);
+
+// Sitemap sigue accesible en raíz para bots
 app.use("/", sitemapRoutes);
-app.use("/reviews", reviewRoutes);
-app.use("/favorites", favoriteRoutes);
-app.use("/analytics", analyticsRoutes);
-app.use("/mensajes", mensajesRoutes);
-app.use("/contenido", contenidoRoutes);
-app.use("/compras", comprasRoutes);
-app.use("/cupones", cuponesRoutes);
-app.use("/reseñas-contenido", reseñasRoutes);
-app.use("/upload", uploadRoutes);
 
 // ── Middleware global de errores (siempre al final) ────────────────
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`ALALA API running on port ${PORT}`));
+app.listen(PORT, () => console.log(`ALALA API running on port ${PORT} [FLOW_ENV: ${process.env.FLOW_ENV || 'sandbox'}]`));

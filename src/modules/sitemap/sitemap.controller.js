@@ -1,6 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../lib/prisma.js";
 
-const prisma = new PrismaClient();
+
+
 
 const STATIC_URLS = [
   { loc: "/", priority: "1.0", changefreq: "weekly" },

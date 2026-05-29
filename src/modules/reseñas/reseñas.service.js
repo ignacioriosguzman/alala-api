@@ -1,5 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from "../../lib/prisma.js";
+
+
 
 export const createReseña = async (data) => {
   const contenidoId = Number(data.contenidoId);

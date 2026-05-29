@@ -1,7 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../lib/prisma.js";
+
 import { createMensaje, getMensajesByCurso, countNoLeidos } from "./mensajes.service.js";
 
-const prisma = new PrismaClient();
+
 
 const handleError = (error, res) => {
   if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {

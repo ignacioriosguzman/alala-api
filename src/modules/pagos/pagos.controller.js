@@ -1,14 +1,10 @@
-import { PrismaClient } from '@prisma/client';
-import { crearPago, obtenerEstadoPago } from './flow.service.js';
+import prisma from '../../lib/prisma.js';
+import { crearPago, obtenerEstadoPago, validarFirmaFlow } from './flow.service.js';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 const ESTADO_FLOW = { 1: 'PENDIENTE', 2: 'PAGADO', 3: 'RECHAZADO', 4: 'ANULADO' };
 
 // POST /api/v1/pagos/crear
-// Body: { cursoId }
-// Header: Authorization: Bearer <token>
 export const crearOrden = async (req, res) => {
   try {
     const { cursoId } = req.body;
@@ -16,16 +12,21 @@ export const crearOrden = async (req, res) => {
 
     if (!cursoId) return res.status(400).json({ error: 'cursoId es requerido' });
 
-    const curso = await prisma.course.findUnique({ where: { id: Number(cursoId) } });
+    const cursoIdNum = Number(cursoId);
+    if (!Number.isInteger(cursoIdNum) || cursoIdNum <= 0) {
+      return res.status(400).json({ error: 'cursoId inválido' });
+    }
+
+    const curso = await prisma.course.findUnique({ where: { id: cursoIdNum } });
     if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
 
-    // Evitar compra duplicada
     const yaMatriculado = await prisma.enrollment.findFirst({
       where: { userId, courseId: curso.id },
     });
     if (yaMatriculado) return res.status(409).json({ error: 'Ya estás inscrito en este curso' });
 
     const usuario = await prisma.user.findUnique({ where: { id: userId } });
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     const commerceOrder = `ALALA-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
 
@@ -62,14 +63,16 @@ export const crearOrden = async (req, res) => {
   }
 };
 
-// POST /api/v1/pagos/confirmacion  ← webhook de Flow (sin autenticación)
+// POST /api/v1/pagos/confirmacion  ← webhook de Flow (valida firma HMAC)
 export const confirmarPago = async (req, res) => {
   try {
+    if (!validarFirmaFlow(req.body)) {
+      console.error('[pagos] webhook: firma inválida', req.body);
+      return res.status(403).send('firma inválida');
+    }
+
     const { token } = req.body;
     if (!token) return res.status(400).send('token requerido');
-
-    const flowStatus = await obtenerEstadoPago(token);
-    const estado = ESTADO_FLOW[flowStatus.status] ?? 'DESCONOCIDO';
 
     const venta = await prisma.venta.findUnique({ where: { flowToken: token } });
     if (!venta) {
@@ -77,38 +80,47 @@ export const confirmarPago = async (req, res) => {
       return res.status(404).send('venta no encontrada');
     }
 
-    await prisma.venta.update({
-      where: { id: venta.id },
-      data: { estado, flowData: flowStatus },
-    });
-
-    if (estado === 'PAGADO') {
-      const yaMatriculado = await prisma.enrollment.findFirst({
-        where: { userId: venta.userId, courseId: venta.courseId },
-      });
-      if (!yaMatriculado) {
-        await prisma.enrollment.create({
-          data: { userId: venta.userId, courseId: venta.courseId },
-        });
-      }
-
-      if (venta.instructorUserId) {
-        await prisma.instructorSaldo.upsert({
-          where: { userId: venta.instructorUserId },
-          create: {
-            userId: venta.instructorUserId,
-            saldoPendiente: venta.pagoInstructor,
-            saldoAcumulado: venta.pagoInstructor,
-          },
-          update: {
-            saldoPendiente: { increment: venta.pagoInstructor },
-            saldoAcumulado: { increment: venta.pagoInstructor },
-          },
-        });
-      }
+    // Idempotencia: si ya está procesado, responder 200 sin reprocessar
+    if (venta.estado === 'PAGADO') {
+      return res.status(200).send('');
     }
 
-    // Flow espera una respuesta 200 vacía
+    const flowStatus = await obtenerEstadoPago(token);
+    const estado = ESTADO_FLOW[flowStatus.status] ?? 'DESCONOCIDO';
+
+    await prisma.$transaction(async (tx) => {
+      await tx.venta.update({
+        where: { id: venta.id },
+        data: { estado, flowData: flowStatus },
+      });
+
+      if (estado === 'PAGADO') {
+        const yaMatriculado = await tx.enrollment.findFirst({
+          where: { userId: venta.userId, courseId: venta.courseId },
+        });
+        if (!yaMatriculado) {
+          await tx.enrollment.create({
+            data: { userId: venta.userId, courseId: venta.courseId },
+          });
+        }
+
+        if (venta.instructorUserId) {
+          await tx.instructorSaldo.upsert({
+            where: { userId: venta.instructorUserId },
+            create: {
+              userId: venta.instructorUserId,
+              saldoPendiente: venta.pagoInstructor,
+              saldoAcumulado: venta.pagoInstructor,
+            },
+            update: {
+              saldoPendiente: { increment: venta.pagoInstructor },
+              saldoAcumulado: { increment: venta.pagoInstructor },
+            },
+          });
+        }
+      }
+    });
+
     res.status(200).send('');
   } catch (err) {
     console.error('[pagos] confirmarPago:', err.message);
@@ -119,7 +131,7 @@ export const confirmarPago = async (req, res) => {
 // GET /api/v1/pagos/retorno?token=xxx  ← redirect de Flow al usuario
 export const retornoPago = async (req, res) => {
   const { token } = req.query;
-  const baseUrl = process.env.FRONTEND_URL;
+  const baseUrl = process.env.FRONTEND_URL || 'https://app.alala.cl';
   try {
     if (!token) return res.redirect(`${baseUrl}/pago-fallido.html?error=sin_token`);
 
@@ -136,10 +148,11 @@ export const retornoPago = async (req, res) => {
   }
 };
 
-// GET /api/v1/pagos/estado/:token  ← consulta de estado desde el frontend
+// GET /api/v1/pagos/estado/:token
 export const estadoPago = async (req, res) => {
   try {
     const { token } = req.params;
+    if (!token) return res.status(400).json({ error: 'token requerido' });
     const venta = await prisma.venta.findUnique({
       where: { flowToken: token },
       select: { estado: true, flowOrder: true, monto: true, courseId: true },
