@@ -39,7 +39,7 @@ async function send({ to, subject, html }) {
 
   try {
     const info = await t.sendMail({
-      from: `"ALALA Chile" <${SMTP_USER}>`,
+      from: '"ALALA Chile" <contacto@alala.cl>',
       to,
       subject,
       html,
@@ -103,6 +103,90 @@ export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {
     </div>
   `;
   return send({ to: email, subject: 'Recupera tu contraseña de ALALA', html });
+}
+
+export async function enviarEmailVerificacionInstructor({ email, nombre, confirmUrl }) {
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:#D4705A;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+              <p style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.03em">ALALÁ</p>
+              <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.75);letter-spacing:.05em;text-transform:uppercase">Plataforma de cursos culturales</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background:#fff;padding:40px 40px 32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb">
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111;letter-spacing:-0.02em">
+                Confirma tu cuenta de instructor
+              </h1>
+              <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6">
+                Hola <strong style="color:#111">${nombre}</strong>, ¡bienvenido a ALALÁ! <br>
+                Para activar tu cuenta y comenzar a publicar cursos, confirma tu dirección de correo electrónico.
+              </p>
+
+              <!-- Button -->
+              <table cellpadding="0" cellspacing="0" style="margin:28px 0">
+                <tr>
+                  <td style="background:#D4705A;border-radius:10px">
+                    <a href="${confirmUrl}"
+                       style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:-0.01em">
+                      Confirmar mi cuenta &#8594;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;font-size:13px;color:#9ca3af;line-height:1.6">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:
+              </p>
+              <p style="margin:0 0 28px;font-size:12px;word-break:break-all">
+                <a href="${confirmUrl}" style="color:#D4705A">${confirmUrl}</a>
+              </p>
+
+              <div style="background:#fef9f8;border:1px solid #f8d5cc;border-radius:8px;padding:14px 16px">
+                <p style="margin:0;font-size:13px;color:#92400e;line-height:1.5">
+                  ⏱ Este enlace es válido por <strong>24 horas</strong>. Si no creaste esta cuenta, puedes ignorar este correo.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#fafafa;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;padding:24px 40px;text-align:center">
+              <p style="margin:0 0 4px;font-size:13px;color:#9ca3af">
+                ¿Tienes dudas? Escríbenos a
+                <a href="mailto:contacto@alala.cl" style="color:#D4705A;text-decoration:none">contacto@alala.cl</a>
+              </p>
+              <p style="margin:0;font-size:12px;color:#d1d5db">
+                ALALÁ Chile &nbsp;·&nbsp; <a href="https://alala.cl" style="color:#d1d5db">alala.cl</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+  return send({
+    to: email,
+    subject: 'Confirma tu cuenta de instructor en ALALÁ',
+    html,
+  });
 }
 
 export async function enviarEmailRecordatorio({

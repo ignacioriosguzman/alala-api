@@ -18,6 +18,19 @@ async function generarTokens(user) {
   return { accessToken, refreshToken };
 }
 
+// El secreto incluye el email del usuario: si cambia el email, el token queda inválido
+function secretoVerificacion(user) {
+  return process.env.JWT_SECRET + user.email;
+}
+
+export function generarTokenVerificacion(user) {
+  return jwt.sign(
+    { id: user.id, email: user.email, type: 'verify' },
+    secretoVerificacion(user),
+    { expiresIn: '24h' }
+  );
+}
+
 export const registerUser = async (data) => {
   validarDatosUsuario(data);
   const existe = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } });
@@ -41,10 +54,11 @@ export const registerInstructor = async (data) => {
       email: data.email.toLowerCase(),
       password: hashed,
       role: "INSTRUCTOR",
+      verificado: false,
     },
   });
-  const tokens = await generarTokens(user);
-  return { user, ...tokens };
+  const verificationToken = generarTokenVerificacion(user);
+  return { user, verificationToken };
 };
 
 export const loginUser = async (email, password) => {
@@ -53,6 +67,13 @@ export const loginUser = async (email, password) => {
   if (!user) return null;
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return null;
+
+  if (user.role === 'INSTRUCTOR' && !user.verificado) {
+    const err = new Error('Debes confirmar tu correo para iniciar sesión');
+    err.code = 'EMAIL_NOT_VERIFIED';
+    throw err;
+  }
+
   const tokens = await generarTokens(user);
   return { user, ...tokens };
 };
@@ -67,14 +88,50 @@ export const refreshAccessToken = async (refreshToken) => {
   return { accessToken, user };
 };
 
-// Forgot password: genera un token JWT de un solo uso firmado con JWT_SECRET + hash_password
-// Al cambiar la contraseña, el token queda automáticamente invalidado.
+export const confirmarEmailInstructor = async (token) => {
+  // Decodificar sin verificar para obtener el id
+  let payload;
+  try {
+    payload = jwt.decode(token);
+  } catch {
+    throw new Error('Token inválido');
+  }
+  if (!payload?.id || payload.type !== 'verify') throw new Error('Token inválido');
+
+  const user = await prisma.user.findUnique({ where: { id: payload.id } });
+  if (!user) throw new Error('Usuario no encontrado');
+  if (user.verificado) return { ya_verificado: true, user };
+
+  // Verificar firma con el secreto correcto
+  try {
+    jwt.verify(token, secretoVerificacion(user));
+  } catch {
+    throw new Error('El enlace de confirmación es inválido o ha expirado. Solicita uno nuevo.');
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { verificado: true },
+  });
+  return { ya_verificado: false, user: updated };
+};
+
+export const reenviarConfirmacion = async (email) => {
+  if (!email || !EMAIL_RE.test(email)) throw new Error('Email inválido');
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  // Respuesta genérica para no revelar si el email existe
+  if (!user || user.role !== 'INSTRUCTOR') return null;
+  if (user.verificado) return null;
+  const verificationToken = generarTokenVerificacion(user);
+  return { user, verificationToken };
+};
+
+// Forgot password: token JWT de un solo uso firmado con JWT_SECRET + hash_password
 export const generarTokenReset = async (email) => {
   if (!email || !EMAIL_RE.test(email)) return null;
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user) return null; // No revelar si el email existe (seguridad)
+  if (!user) return null;
 
-  // El secreto combina JWT_SECRET con el hash actual — se invalida al cambiar contraseña
   const secret = process.env.JWT_SECRET + user.password;
   const token = jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '1h' });
   return { token, user };
@@ -95,7 +152,6 @@ export const resetPassword = async (userId, token, newPassword) => {
 
   const hashed = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
-  // Invalidar todos los refresh tokens del usuario
   await prisma.refreshToken.deleteMany({ where: { userId } });
   return true;
 };

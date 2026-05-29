@@ -1,6 +1,20 @@
-import { registerUser, registerInstructor, loginUser, refreshAccessToken, generarTokenReset, resetPassword } from "./auth.service.js";
+import {
+  registerUser,
+  registerInstructor,
+  loginUser,
+  refreshAccessToken,
+  generarTokenReset,
+  resetPassword,
+  confirmarEmailInstructor,
+  reenviarConfirmacion,
+} from "./auth.service.js";
 import prisma from "../../lib/prisma.js";
-import { enviarEmailRecuperacion } from "../../services/email.service.js";
+import {
+  enviarEmailRecuperacion,
+  enviarEmailVerificacionInstructor,
+} from "../../services/email.service.js";
+
+const FRONTEND = process.env.FRONTEND_URL || 'https://alala.cl';
 
 const handleAuthError = (error, res) => {
   if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
@@ -10,7 +24,13 @@ const handleAuthError = (error, res) => {
   res.status(400).json({ error: error.message });
 };
 
-const userPublic = (u) => ({ id: u.id, nombre: u.nombre, email: u.email, role: u.role });
+const userPublic = (u) => ({
+  id: u.id,
+  nombre: u.nombre,
+  email: u.email,
+  role: u.role,
+  verificado: u.verificado,
+});
 
 export const register = async (req, res) => {
   try {
@@ -28,12 +48,22 @@ export const register = async (req, res) => {
 
 export const registrarInstructor = async (req, res) => {
   try {
-    const { user, accessToken, refreshToken } = await registerInstructor(req.body);
+    const { user, verificationToken } = await registerInstructor(req.body);
+
+    const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(verificationToken)}`;
+    try {
+      await enviarEmailVerificacionInstructor({
+        email: user.email,
+        nombre: user.nombre,
+        confirmUrl,
+      });
+    } catch (emailErr) {
+      console.error('[auth] Error enviando email de verificación:', emailErr.message);
+    }
+
     res.status(201).json({
-      message: "Instructor registrado correctamente",
+      message: "Instructor registrado. Revisa tu correo para confirmar tu cuenta.",
       user: userPublic(user),
-      accessToken,
-      refreshToken,
     });
   } catch (error) {
     handleAuthError(error, res);
@@ -48,8 +78,18 @@ export const login = async (req, res) => {
     }
     const result = await loginUser(email, password);
     if (!result) return res.status(401).json({ error: "Credenciales inválidas" });
-    res.json({ user: userPublic(result.user), accessToken: result.accessToken, refreshToken: result.refreshToken });
+    res.json({
+      user: userPublic(result.user),
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
   } catch (error) {
+    if (error.code === 'EMAIL_NOT_VERIFIED') {
+      return res.status(403).json({
+        error: error.message,
+        code: 'EMAIL_NOT_VERIFIED',
+      });
+    }
     handleAuthError(error, res);
   }
 };
@@ -84,12 +124,14 @@ export const forgotPassword = async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Email requerido' });
 
     const result = await generarTokenReset(email);
-
-    // Siempre responder OK (no revelar si el email existe)
     if (result) {
-      const resetUrl = `${process.env.FRONTEND_URL || 'https://alala.cl'}/reset-password.html?id=${result.user.id}&token=${encodeURIComponent(result.token)}`;
+      const resetUrl = `${FRONTEND}/reset-password.html?id=${result.user.id}&token=${encodeURIComponent(result.token)}`;
       try {
-        await enviarEmailRecuperacion({ email: result.user.email, nombre: result.user.nombre, resetUrl });
+        await enviarEmailRecuperacion({
+          email: result.user.email,
+          nombre: result.user.nombre,
+          resetUrl,
+        });
       } catch (emailErr) {
         console.error('[auth] Error enviando email de recuperación:', emailErr.message);
       }
@@ -109,6 +151,47 @@ export const doResetPassword = async (req, res) => {
     }
     await resetPassword(Number(id), token, password);
     res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (error) {
+    handleAuthError(error, res);
+  }
+};
+
+export const confirmar = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: 'Token requerido' });
+
+    const result = await confirmarEmailInstructor(token);
+    if (result.ya_verificado) {
+      return res.json({ ok: true, message: 'Tu cuenta ya estaba confirmada. Puedes iniciar sesión.' });
+    }
+    res.json({ ok: true, message: '¡Cuenta confirmada! Ya puedes iniciar sesión como instructor.' });
+  } catch (error) {
+    handleAuthError(error, res);
+  }
+};
+
+export const reenviar = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email requerido' });
+
+    const result = await reenviarConfirmacion(email);
+    if (result) {
+      const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(result.verificationToken)}`;
+      try {
+        await enviarEmailVerificacionInstructor({
+          email: result.user.email,
+          nombre: result.user.nombre,
+          confirmUrl,
+        });
+      } catch (emailErr) {
+        console.error('[auth] Error reenviando email de verificación:', emailErr.message);
+      }
+    }
+
+    // Respuesta genérica para no revelar si el email existe
+    res.json({ message: 'Si el correo corresponde a una cuenta de instructor pendiente, recibirás el enlace de confirmación.' });
   } catch (error) {
     handleAuthError(error, res);
   }

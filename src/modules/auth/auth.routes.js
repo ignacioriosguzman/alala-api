@@ -1,5 +1,15 @@
 import express from "express";
-import { register, registrarInstructor, login, refresh, logout, forgotPassword, doResetPassword } from "./auth.controller.js";
+import {
+  register,
+  registrarInstructor,
+  login,
+  refresh,
+  logout,
+  forgotPassword,
+  doResetPassword,
+  confirmar,
+  reenviar,
+} from "./auth.controller.js";
 
 const router = express.Router();
 
@@ -10,5 +20,7 @@ router.post("/refresh", refresh);
 router.post("/logout", logout);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", doResetPassword);
+router.get("/confirmar", confirmar);
+router.post("/reenviar-confirmacion", reenviar);
 
 export default router;
