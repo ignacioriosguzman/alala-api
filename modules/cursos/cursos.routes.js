@@ -1,12 +1,16 @@
 import express from "express";
-import { listar, obtener, crear, actualizar, eliminar } from "./cursos.controller.js";
+import { authGuard } from "../../middlewares/authGuard.js";
+import { roleGuard } from "../../middlewares/roleGuard.js";
+import { listar, obtener, crear, actualizar, eliminar, upsell } from "./cursos.controller.js";
 
 const router = express.Router();
 
 router.get("/", listar);
 router.get("/:id", obtener);
-router.post("/", crear);
-router.put("/:id", actualizar);
-router.delete("/:id", eliminar);
+router.get("/:id/upsell", upsell);
+router.post("/", authGuard, roleGuard("INSTRUCTOR", "ADMIN"), crear);
+router.put("/:id", authGuard, roleGuard("INSTRUCTOR", "ADMIN"), actualizar);
+router.patch("/:id", authGuard, roleGuard("INSTRUCTOR", "ADMIN"), actualizar);
+router.delete("/:id", authGuard, roleGuard("INSTRUCTOR", "ADMIN"), eliminar);
 
 export default router;

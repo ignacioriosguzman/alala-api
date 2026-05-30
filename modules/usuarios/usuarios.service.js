@@ -1,5 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from "../../lib/prisma.js";
+
+
 
 export const getUsuarios = () => prisma.user.findMany();
 export const getUsuario = (id) => prisma.user.findUnique({ where: { id: Number(id) } });

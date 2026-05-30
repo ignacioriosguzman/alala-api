@@ -1,38 +1,57 @@
 import { getUsuarios, getUsuario, updateUsuario, deleteUsuario } from "./usuarios.service.js";
 
-export const listar = async (req, res, next) => {
+const handleError = (error, res) => {
+  if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
+    console.error('[Usuarios] Error de Prisma:', error.message);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+  res.status(400).json({ error: error.message });
+};
+
+const validarId = (id) => {
+  const n = Number(id);
+  return isNaN(n) ? null : n;
+};
+
+export const listar = async (req, res) => {
   try {
-    const usuarios = await getUsuarios();
-    res.json({ status: "ok", data: usuarios });
+    const data = await getUsuarios();
+    res.json(data);
   } catch (error) {
-    next(error);
+    handleError(error, res);
   }
 };
 
-export const obtener = async (req, res, next) => {
+export const obtener = async (req, res) => {
   try {
-    const usuario = await getUsuario(req.params.id);
-    if (!usuario) return res.status(404).json({ status: "error", message: "Usuario no encontrado" });
-    res.json({ status: "ok", data: usuario });
+    const id = validarId(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID inválido' });
+    const data = await getUsuario(id);
+    if (!data) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json(data);
   } catch (error) {
-    next(error);
+    handleError(error, res);
   }
 };
 
-export const actualizar = async (req, res, next) => {
+export const actualizar = async (req, res) => {
   try {
-    const usuario = await updateUsuario(req.params.id, req.body);
-    res.json({ status: "ok", message: "Usuario actualizado", data: usuario });
+    const id = validarId(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID inválido' });
+    const data = await updateUsuario(id, req.body);
+    res.json(data);
   } catch (error) {
-    next(error);
+    handleError(error, res);
   }
 };
 
-export const eliminar = async (req, res, next) => {
+export const eliminar = async (req, res) => {
   try {
-    await deleteUsuario(req.params.id);
-    res.json({ status: "ok", message: "Usuario eliminado" });
+    const id = validarId(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID inválido' });
+    await deleteUsuario(id);
+    res.json({ message: 'Usuario eliminado' });
   } catch (error) {
-    next(error);
+    handleError(error, res);
   }
 };
