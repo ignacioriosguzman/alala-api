@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import authRoutes from "./modules/auth/auth.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
@@ -25,26 +26,36 @@ import miniebooksRoutes from "./modules/miniebooks/miniebooks.routes.js";
 import creadorRoutes from "./modules/creador/creador.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { verificarConexionSMTP } from "./services/email.service.js";
+import { limpiarTokensExpirados } from "./modules/auth/auth.service.js";
 
 dotenv.config();
 
 const app = express();
 app.set('trust proxy', 1);
 
-// ── Headers de seguridad ───────────────────────────────────────────
+// ── Headers de seguridad (helmet) ─────────────────────────────────
+app.use(helmet({
+  // API REST — no sirve HTML, bloquear todo
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  // HSTS: 2 años, subdomains, preload
+  strictTransportSecurity: {
+    maxAge: 63072000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  // X-XSS-Protection desactivado (deprecated, puede crear vulnerabilidades en IE)
+  xXssProtection: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  crossOriginEmbedderPolicy: false,
+}));
+// Permissions-Policy (helmet no lo gestiona aún)
 app.use((req, res, next) => {
-  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  // CSP específica para API REST: no sirve HTML, bloquea todo lo innecesario
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'none'; " +
-    "frame-ancestors 'none';"
-  );
   next();
 });
 
@@ -72,7 +83,7 @@ app.use(cors({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-app.get("/health", (req, res) => res.json({ status: "ok", service: "ALALA API", env: process.env.FLOW_ENV || 'sandbox' }));
+app.get("/health", (req, res) => res.json({ status: "ok", service: "ALALA API" }));
 
 const v1 = express.Router();
 v1.use("/auth", authLimiter, authRoutes);
@@ -107,13 +118,18 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`ALALA API running on port ${PORT} [FLOW_ENV: ${process.env.FLOW_ENV || 'sandbox'}]`);
-  // Verificar SMTP al arrancar para detectar config faltante desde los logs
   verificarConexionSMTP().then(r => {
     if (r.ok) {
       console.log('[startup] ✓ SMTP OK — correos habilitados.');
     } else {
       console.warn('[startup] ✗ SMTP no disponible:', r.error);
-      console.warn('[startup] Establece SMTP_HOST, SMTP_USER, SMTP_PASS en Railway para habilitar el envío de correos.');
     }
   });
+  // Limpieza diaria de refresh tokens expirados
+  limpiarTokensExpirados().then(n => {
+    if (n > 0) console.log(`[startup] ✓ ${n} refresh token(s) expirados eliminados.`);
+  }).catch(() => {});
+  setInterval(() => {
+    limpiarTokensExpirados().catch(() => {});
+  }, 24 * 60 * 60 * 1000);
 });

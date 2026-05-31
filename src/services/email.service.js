@@ -1,5 +1,15 @@
 import nodemailer from "nodemailer";
 
+const esc = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+};
+
 let _transporter = null;
 let _transporterConfigKey = '';
 
@@ -107,23 +117,23 @@ export async function enviarEmailConfirmacionCompra({
 }) {
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
-      <h2>¡Gracias por tu compra, ${nombre}!</h2>
-      <p>Tu inscripción al curso <strong>${cursoTitulo}</strong> ha sido confirmada.</p>
+      <h2>¡Gracias por tu compra, ${esc(nombre)}!</h2>
+      <p>Tu inscripción al curso <strong>${esc(cursoTitulo)}</strong> ha sido confirmada.</p>
       <ul>
-        <li><strong>Fecha:</strong> ${cursoFecha || "Por definir"}</li>
-        <li><strong>Dirección:</strong> ${cursoDireccion || "Por definir"}</li>
-        <li><strong>Orden:</strong> ${ordenId}</li>
+        <li><strong>Fecha:</strong> ${esc(cursoFecha) || "Por definir"}</li>
+        <li><strong>Dirección:</strong> ${esc(cursoDireccion) || "Por definir"}</li>
+        <li><strong>Orden:</strong> ${esc(String(ordenId))}</li>
       </ul>
       <p>Te esperamos. ¡Nos vemos pronto!</p>
     </div>
   `;
-  return send({ to: email, subject: `Confirmación de compra – ${cursoTitulo}`, html });
+  return send({ to: email, subject: `Confirmación de compra – ${esc(cursoTitulo)}`, html });
 }
 
 export async function enviarEmailBienvenidaInstructor({ email, nombre }) {
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
-      <h2>¡Bienvenido a ALALÁ, ${nombre}!</h2>
+      <h2>¡Bienvenido a ALALÁ, ${esc(nombre)}!</h2>
       <p>Estamos emocionados de tenerte como instructor en nuestra plataforma.</p>
       <p>Desde ahora puedes crear cursos, gestionar tus alumnos y hacer crecer tu comunidad.</p>
       <p>Si tienes dudas, escríbenos a <a href="mailto:hola@alala.cl">hola@alala.cl</a>.</p>
@@ -156,7 +166,7 @@ export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {
                 Recupera tu contraseña
               </h1>
               <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6">
-                Hola <strong style="color:#111">${nombre}</strong>,<br>
+                Hola <strong style="color:#111">${esc(nombre)}</strong>,<br>
                 Recibimos una solicitud para restablecer la contraseña de tu cuenta en ALALÁ.
               </p>
 
@@ -232,7 +242,7 @@ export async function enviarEmailVerificacionInstructor({ email, nombre, confirm
                 Confirma tu cuenta de instructor
               </h1>
               <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6">
-                Hola <strong style="color:#111">${nombre}</strong>, ¡bienvenido a ALALÁ! <br>
+                Hola <strong style="color:#111">${esc(nombre)}</strong>, ¡bienvenido a ALALÁ! <br>
                 Para activar tu cuenta y comenzar a publicar cursos, confirma tu dirección de correo electrónico.
               </p>
 
@@ -297,18 +307,18 @@ export async function enviarEmailRecordatorio({
 }) {
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
-      <h2>¡Hola ${nombre}!</h2>
-      <p>Tu curso <strong>${cursoTitulo}</strong> comienza pronto.</p>
+      <h2>¡Hola ${esc(nombre)}!</h2>
+      <p>Tu curso <strong>${esc(cursoTitulo)}</strong> comienza pronto.</p>
       <ul>
-        <li><strong>Fecha:</strong> ${cursoFecha || "Por definir"}</li>
-        <li><strong>Faltan:</strong> ${diasRestantes} días</li>
+        <li><strong>Fecha:</strong> ${esc(cursoFecha) || "Por definir"}</li>
+        <li><strong>Faltan:</strong> ${esc(String(diasRestantes))} días</li>
       </ul>
       <p>¡Prepárate para una gran experiencia de aprendizaje!</p>
     </div>
   `;
   return send({
     to: email,
-    subject: `Recordatorio: ${cursoTitulo} comienza en ${diasRestantes} días`,
+    subject: `Recordatorio: ${esc(cursoTitulo)} comienza en ${esc(String(diasRestantes))} días`,
     html,
   });
 }

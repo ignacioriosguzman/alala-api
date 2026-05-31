@@ -14,10 +14,14 @@ const handleError = (error, res) => {
 
 export const evento = async (req, res) => {
   try {
-    const data = { ...req.body };
-    if (req.user?.id && !data.userId) {
-      data.userId = req.user.id;
-    }
+    const { tipo, cursoId, metadata } = req.body;
+    // userId always from JWT, never from request body
+    const data = {
+      tipo,
+      cursoId: cursoId ? Number(cursoId) : undefined,
+      metadata,
+      userId: req.user?.id ?? null,
+    };
     const result = await registrarEvento(data);
     res.status(201).json(result);
   } catch (error) {

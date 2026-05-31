@@ -36,7 +36,8 @@ export const obtener = async (req, res) => {
 
 export const crear = async (req, res) => {
   try {
-    const data = await createCurso(req.body);
+    // Force instructorUserId from JWT, never trust the request body
+    const data = await createCurso({ ...req.body, instructorUserId: req.user.id });
     res.status(201).json(data);
   } catch (error) {
     handleError(error, res);
@@ -47,6 +48,13 @@ export const actualizar = async (req, res) => {
   try {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID inválido' });
+    if (req.user.role !== 'ADMIN') {
+      const curso = await getCurso(id);
+      if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+      if (curso.instructorUserId !== req.user.id) {
+        return res.status(403).json({ error: 'Solo puedes modificar tus propios cursos' });
+      }
+    }
     const data = await updateCurso(id, req.body);
     res.json(data);
   } catch (error) {
@@ -58,6 +66,13 @@ export const eliminar = async (req, res) => {
   try {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID inválido' });
+    if (req.user.role !== 'ADMIN') {
+      const curso = await getCurso(id);
+      if (!curso) return res.status(404).json({ error: 'Curso no encontrado' });
+      if (curso.instructorUserId !== req.user.id) {
+        return res.status(403).json({ error: 'Solo puedes eliminar tus propios cursos' });
+      }
+    }
     await deleteCurso(id);
     res.json({ message: 'Curso eliminado' });
   } catch (error) {
