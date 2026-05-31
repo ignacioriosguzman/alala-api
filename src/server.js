@@ -21,8 +21,10 @@ import cuponesRoutes from "./modules/cupones/cupones.routes.js";
 import reseñasRoutes from "./modules/reseñas/reseñas.routes.js";
 import uploadRoutes from "./modules/upload/upload.routes.js";
 import microcontenidosRoutes from "./modules/microcontenidos/microcontenidos.routes.js";
+import miniebooksRoutes from "./modules/miniebooks/miniebooks.routes.js";
 import creadorRoutes from "./modules/creador/creador.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
+import { verificarConexionSMTP } from "./services/email.service.js";
 
 dotenv.config();
 
@@ -92,6 +94,7 @@ v1.use("/cupones", cuponesRoutes);
 v1.use("/reseñas-contenido", reseñasRoutes);
 v1.use("/upload", uploadRoutes);
 v1.use("/microcontenidos", microcontenidosRoutes);
+v1.use("/miniebooks", miniebooksRoutes);
 v1.use("/creador", creadorRoutes);
 app.use("/api/v1", v1);
 
@@ -102,4 +105,15 @@ app.use("/", sitemapRoutes);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`ALALA API running on port ${PORT} [FLOW_ENV: ${process.env.FLOW_ENV || 'sandbox'}]`));
+app.listen(PORT, () => {
+  console.log(`ALALA API running on port ${PORT} [FLOW_ENV: ${process.env.FLOW_ENV || 'sandbox'}]`);
+  // Verificar SMTP al arrancar para detectar config faltante desde los logs
+  verificarConexionSMTP().then(r => {
+    if (r.ok) {
+      console.log('[startup] ✓ SMTP OK — correos habilitados.');
+    } else {
+      console.warn('[startup] ✗ SMTP no disponible:', r.error);
+      console.warn('[startup] Establece SMTP_HOST, SMTP_USER, SMTP_PASS en Railway para habilitar el envío de correos.');
+    }
+  });
+});

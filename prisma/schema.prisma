@@ -28,6 +28,7 @@ model User {
   comprasContenido  CompraContenido[]
   resenasContenido  ResenaContenido[]
   microContenidos   MicroContenido[]
+  miniEbooks        MiniEbook[]
 
   @@index([email])
   @@index([role])
@@ -366,4 +367,119 @@ model ProgresoMicroContenido {
 
   @@unique([userId, microContenidoId])
   @@unique([emailInvitado, microContenidoId])
+}
+
+// ═══════════════════════════════════════════════════════════
+// MÓDULO MINI-EBOOKS
+// ═══════════════════════════════════════════════════════════
+
+model MiniEbook {
+  id                Int      @id @default(autoincrement())
+  titulo            String
+  descripcion       String
+  descripcionLarga  String?
+
+  // Manuscrito
+  manuscritoTexto   String?  // texto plano limpio
+  manuscritoHtml    String?  // HTML maquetado según plantilla
+
+  // Portada
+  portadaUrl        String
+
+  // Archivos generados
+  epubUrl           String?
+  pdfUrl            String?
+  tamanoMb          Float?
+  paginas           Int?
+  palabras          Int?
+
+  // Metadatos
+  template          String   // "minimalista" | "cinematografica" | "poetica" | "motivacional"
+  categoria         String   @default("General")
+  palabrasClave     String[]
+  idioma            String   @default("es")
+
+  // Precio y ventas
+  precio            Int
+  precioOferta      Int?
+  comisionPct       Float    @default(20.0)
+  ventas            Int      @default(0)
+  rating            Float    @default(0)
+  reviews           Int      @default(0)
+
+  // Estado
+  status            String   @default("borrador") // borrador | activo | pausado
+
+  // Autor
+  autorId           Int
+  autor             User     @relation(fields: [autorId], references: [id])
+
+  // Índice generado automáticamente (JSON string)
+  indice            String?
+
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relaciones
+  compras           CompraMiniEbook[]
+  resenas           ResenaMiniEbook[]
+  favoritos         FavoriteMiniEbook[]
+  progresos         ProgresoMiniEbook[]
+
+  @@index([status])
+  @@index([categoria])
+  @@index([autorId])
+  @@index([template])
+}
+
+model CompraMiniEbook {
+  id                 Int       @id @default(autoincrement())
+  miniEbookId        Int
+  miniEbook          MiniEbook @relation(fields: [miniEbookId], references: [id])
+  userId             Int?
+  emailInvitado      String?
+  monto              Int
+  comisionPlataforma Int
+  pagoCreador        Int
+  estado             String    @default("completada")
+  downloadUrl        String?
+  createdAt          DateTime  @default(now())
+
+  @@unique([userId, miniEbookId])
+  @@unique([emailInvitado, miniEbookId])
+}
+
+model ResenaMiniEbook {
+  id          Int       @id @default(autoincrement())
+  miniEbookId Int
+  miniEbook   MiniEbook @relation(fields: [miniEbookId], references: [id])
+  userId      Int
+  rating      Int
+  comentario  String
+  createdAt   DateTime  @default(now())
+}
+
+model FavoriteMiniEbook {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  miniEbookId Int
+  miniEbook   MiniEbook @relation(fields: [miniEbookId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, miniEbookId])
+}
+
+model ProgresoMiniEbook {
+  id            Int       @id @default(autoincrement())
+  userId        Int?
+  emailInvitado String?
+  miniEbookId   Int
+  miniEbook     MiniEbook @relation(fields: [miniEbookId], references: [id])
+  porcentaje    Float     @default(0)
+  leidoCompleto Boolean   @default(false)
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, miniEbookId])
+  @@unique([emailInvitado, miniEbookId])
 }
