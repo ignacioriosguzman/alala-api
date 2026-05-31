@@ -33,15 +33,16 @@ function getTransporter() {
   const configKey = `${host}:${port}:${user}`;
   if (_transporter && configKey === _transporterConfigKey) return _transporter;
 
+  // SendGrid y Gmail tienen certificados válidos → verificar siempre.
+  // Hosting compartido (cPanel) puede tener certs autofirmados → desactivar verificación.
+  const isKnownProvider = host === 'smtp.sendgrid.net' || host === 'smtp.gmail.com';
   _transporter = nodemailer.createTransport({
     host,
     port,
     secure: port === 465,
     auth: { user, pass },
     tls: {
-      // Solo desactivar verificación de certificado en hosting compartido (cPanel).
-      // SendGrid y otros proveedores serious usan certificados válidos.
-      rejectUnauthorized: host !== 'smtp.sendgrid.net' && host !== 'smtp.gmail.com',
+      rejectUnauthorized: isKnownProvider,
     },
     connectionTimeout: 10000,
     socketTimeout: 15000,
