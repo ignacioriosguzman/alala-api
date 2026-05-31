@@ -128,12 +128,22 @@ export const reenviarConfirmacion = async (email) => {
 
 // Forgot password: token JWT de un solo uso firmado con JWT_SECRET + hash_password
 export const generarTokenReset = async (email) => {
-  if (!email || !EMAIL_RE.test(email)) return null;
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user) return null;
+  const emailNorm = (email || '').trim().toLowerCase();
+  if (!emailNorm || !EMAIL_RE.test(emailNorm)) {
+    console.warn('[auth][generarTokenReset] Email inválido o vacío — raw recibido:', JSON.stringify(email));
+    return null;
+  }
+  console.log('[auth][generarTokenReset] Buscando usuario con email normalizado:', emailNorm);
+  const user = await prisma.user.findUnique({ where: { email: emailNorm } });
+  if (!user) {
+    console.warn('[auth][generarTokenReset] Usuario no encontrado para email:', emailNorm);
+    return null;
+  }
+  console.log('[auth][generarTokenReset] ✓ Usuario encontrado — id:', user.id, '| role:', user.role, '| verificado:', user.verificado);
 
   const secret = process.env.JWT_SECRET + user.password;
   const token = jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '1h' });
+  console.log('[auth][generarTokenReset] ✓ Token generado. Procediendo a enviar correo.');
   return { token, user };
 };
 

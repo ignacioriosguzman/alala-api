@@ -58,7 +58,10 @@ export const registrarInstructor = async (req, res) => {
 
     const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(verificationToken)}`;
     enviarEmailVerificacionInstructor({ email: user.email, nombre: user.nombre, confirmUrl })
-      .catch(err => console.error('[auth] Error enviando email de verificación:', err.message));
+      .then(r => {
+        if (r?.fallback) console.error('[auth][registrarInstructor] 🚫 SMTP mal configurado. Correo de verificación NO enviado a:', user.email);
+      })
+      .catch(err => console.error('[auth][registrarInstructor] 🚫 Error SMTP al enviar verificación:', err.message));
   } catch (error) {
     handleAuthError(error, res);
   }
@@ -114,19 +117,34 @@ export const logout = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = (req.body.email || '').trim();
     if (!email) return res.status(400).json({ error: 'Email requerido' });
+    console.log('[auth][forgotPassword] Solicitud recibida para email:', email);
 
     const result = await generarTokenReset(email);
 
     // Responder inmediatamente — no bloquear esperando al servidor SMTP
     res.json({ message: 'Si el correo está registrado, recibirás un enlace de recuperación.' });
 
-    if (result) {
-      const resetUrl = `${FRONTEND}/reset-password.html?id=${result.user.id}&token=${encodeURIComponent(result.token)}`;
-      enviarEmailRecuperacion({ email: result.user.email, nombre: result.user.nombre, resetUrl })
-        .catch(err => console.error('[auth] Error enviando email de recuperación:', err.message));
+    if (!result) {
+      // generarTokenReset ya logueó el motivo exacto (email inválido o usuario no encontrado)
+      return;
     }
+
+    console.log('[auth][forgotPassword] Iniciando envío de correo a:', result.user.email);
+    const resetUrl = `${FRONTEND}/reset-password.html?id=${result.user.id}&token=${encodeURIComponent(result.token)}`;
+    enviarEmailRecuperacion({ email: result.user.email, nombre: result.user.nombre, resetUrl })
+      .then(r => {
+        if (r?.fallback) {
+          console.error('[auth][forgotPassword] 🚫 CORREO NO ENVIADO (SMTP mal configurado). Destinatario:', result.user.email);
+          console.error('[auth][forgotPassword] Revisa los logs de [email] arriba. Lo más probable: falta SMTP_FROM en Railway.');
+        } else if (!r?.ok) {
+          console.error('[auth][forgotPassword] 🚫 CORREO RECHAZADO POR SMTP. Destinatario:', result.user.email, 'Error:', r?.error);
+        } else {
+          console.log('[auth][forgotPassword] ✓ Correo de recuperación enviado a:', result.user.email);
+        }
+      })
+      .catch(err => console.error('[auth][forgotPassword] 🚫 Error SMTP al enviar recuperación:', err.message));
   } catch (error) {
     handleAuthError(error, res);
   }
@@ -172,7 +190,10 @@ export const reenviar = async (req, res) => {
     if (result) {
       const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(result.verificationToken)}`;
       enviarEmailVerificacionInstructor({ email: result.user.email, nombre: result.user.nombre, confirmUrl })
-        .catch(err => console.error('[auth] Error reenviando email de verificación:', err.message));
+        .then(r => {
+          if (r?.fallback) console.error('[auth][reenviar] 🚫 SMTP mal configurado. Correo de confirmación NO reenviado a:', result.user.email);
+        })
+        .catch(err => console.error('[auth][reenviar] 🚫 Error SMTP al reenviar verificación:', err.message));
     }
   } catch (error) {
     handleAuthError(error, res);
