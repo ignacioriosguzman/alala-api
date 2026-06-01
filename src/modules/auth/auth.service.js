@@ -117,14 +117,16 @@ export const refreshAccessToken = async (refreshToken) => {
 };
 
 export const confirmarEmailInstructor = async (token) => {
-  // Decodificar sin verificar para obtener el id
   let payload;
   try {
     payload = jwt.decode(token);
   } catch {
     throw new Error('Token inválido');
   }
-  if (!payload?.id || payload.type !== 'verify') throw new Error('Token inválido');
+  // Validar estructura antes de cualquier query a la BD
+  if (!payload?.id || typeof payload.id !== 'number' || payload.id <= 0 || payload.type !== 'verify') {
+    throw new Error('Token inválido');
+  }
 
   const user = await prisma.user.findUnique({ where: { id: payload.id } });
   if (!user) throw new Error('Usuario no encontrado');

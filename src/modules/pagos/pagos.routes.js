@@ -7,6 +7,6 @@ const router = express.Router();
 router.post("/crear", authGuard, crearOrden);
 router.post("/confirmacion", confirmarPago);   // webhook Flow — sin auth
 router.get("/retorno", retornoPago);            // redirect Flow → frontend
-router.get("/estado/:token", estadoPago);       // consulta pública de estado
+router.get("/estado/:token", authGuard, estadoPago); // requiere sesión activa
 
 export default router;

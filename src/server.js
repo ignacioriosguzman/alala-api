@@ -3,6 +3,16 @@ import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+
+// Capturar errores no controlados antes de que tiren el proceso
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Excepción no capturada:', err.stack || err.message);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Promesa rechazada no capturada:', reason);
+  process.exit(1);
+});
 import authRoutes from "./modules/auth/auth.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
 import cursosRoutes from "./modules/cursos/cursos.routes.js";
@@ -29,6 +39,18 @@ import { verificarConexionSMTP } from "./services/email.service.js";
 import { limpiarTokensExpirados } from "./modules/auth/auth.service.js";
 
 dotenv.config();
+
+// Validar variables de entorno críticas antes de arrancar
+const REQUIRED_ENV = ['JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'DATABASE_URL'];
+const missingEnv = REQUIRED_ENV.filter(v => !process.env[v]);
+if (missingEnv.length) {
+  console.error('[FATAL] Variables de entorno faltantes:', missingEnv.join(', '));
+  process.exit(1);
+}
+if ((process.env.JWT_SECRET || '').length < 32) {
+  console.error('[FATAL] JWT_SECRET debe tener al menos 32 caracteres.');
+  process.exit(1);
+}
 
 const app = express();
 app.set('trust proxy', 1);
