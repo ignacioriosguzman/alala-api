@@ -39,6 +39,7 @@ export const deleteCurso = (id) =>
     prisma.favorite.deleteMany({ where: { courseId: Number(id) } }),
     prisma.review.deleteMany({ where: { cursoId: Number(id) } }),
     prisma.enrollment.deleteMany({ where: { courseId: Number(id) } }),
+    prisma.venta.deleteMany({ where: { courseId: Number(id) } }),
     prisma.mensaje.deleteMany({ where: { cursoId: Number(id) } }),
     prisma.course.delete({ where: { id: Number(id) } }),
   ]);
