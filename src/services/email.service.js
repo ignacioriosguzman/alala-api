@@ -141,14 +141,94 @@ export async function enviarEmailConfirmacionCompra({
 
 export async function enviarEmailBienvenidaInstructor({ email, nombre }) {
   const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:auto">
-      <h2>¡Bienvenido a ALALA, ${esc(nombre)}!</h2>
-      <p>Estamos emocionados de tenerte como instructor en nuestra plataforma.</p>
-      <p>Desde ahora puedes crear cursos, gestionar tus alumnos y hacer crecer tu comunidad.</p>
-      <p>Si tienes dudas, escríbenos a <a href="mailto:hola@alala.cl">hola@alala.cl</a>.</p>
-    </div>
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#D4705A;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+            <p style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.03em">ALALA</p>
+            <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.75);letter-spacing:.05em;text-transform:uppercase">Plataforma de cursos culturales</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="background:#fff;padding:40px 40px 32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb">
+            <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111;letter-spacing:-0.02em">
+              ¡Ya eres instructor en ALALA, ${esc(nombre)}!
+            </h1>
+            <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.6">
+              Tu cuenta ha sido confirmada. A partir de ahora puedes publicar cursos, conectar con alumnos y hacer crecer tu comunidad creativa en Chile.
+            </p>
+
+            <!-- Pasos -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
+              <tr>
+                <td style="background:#fef9f8;border-radius:12px;padding:24px 28px">
+                  <p style="margin:0 0 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#D4705A">Tus próximos pasos</p>
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding:6px 0;font-size:14px;color:#374151">
+                        <span style="display:inline-block;width:22px;height:22px;background:#D4705A;border-radius:50%;color:#fff;font-size:11px;font-weight:700;text-align:center;line-height:22px;margin-right:10px;vertical-align:middle">1</span>
+                        Completa tu perfil de instructor
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0;font-size:14px;color:#374151">
+                        <span style="display:inline-block;width:22px;height:22px;background:#D4705A;border-radius:50%;color:#fff;font-size:11px;font-weight:700;text-align:center;line-height:22px;margin-right:10px;vertical-align:middle">2</span>
+                        Publica tu primer curso
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:6px 0;font-size:14px;color:#374151">
+                        <span style="display:inline-block;width:22px;height:22px;background:#D4705A;border-radius:50%;color:#fff;font-size:11px;font-weight:700;text-align:center;line-height:22px;margin-right:10px;vertical-align:middle">3</span>
+                        Comparte tu curso con tu comunidad
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <!-- CTA -->
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background:#D4705A;border-radius:10px">
+                  <a href="https://alala.cl/panel-instructor.html"
+                     style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:-0.01em">
+                    Ir a mi panel de instructor &#8594;
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#fafafa;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;padding:24px 40px;text-align:center">
+            <p style="margin:0 0 4px;font-size:13px;color:#9ca3af">
+              ¿Tienes dudas? <a href="mailto:contacto@alala.cl" style="color:#D4705A;text-decoration:none">contacto@alala.cl</a>
+            </p>
+            <p style="margin:0;font-size:12px;color:#d1d5db">
+              ALALA Chile &nbsp;·&nbsp; <a href="https://alala.cl" style="color:#d1d5db">alala.cl</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
   `;
-  return send({ to: email, subject: 'Bienvenido a ALALA como instructor', html });
+  return send({ to: email, subject: `¡Bienvenido a ALALA, ${esc(nombre)}! Tu cuenta está activa`, html });
 }
 
 export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {

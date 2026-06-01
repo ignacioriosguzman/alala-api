@@ -12,6 +12,7 @@ import prisma from "../../lib/prisma.js";
 import {
   enviarEmailRecuperacion,
   enviarEmailVerificacionInstructor,
+  enviarEmailBienvenidaInstructor,
 } from "../../services/email.service.js";
 
 const FRONTEND = process.env.FRONTEND_URL || 'https://alala.cl';
@@ -166,7 +167,19 @@ export const confirmar = async (req, res) => {
     if (result.ya_verificado) {
       return res.json({ ok: true, message: 'Tu cuenta ya estaba confirmada. Puedes iniciar sesión.' });
     }
+
     res.json({ ok: true, message: '¡Cuenta confirmada! Ya puedes iniciar sesión como instructor.' });
+
+    // Correo de bienvenida — solo en la primera confirmación, en background
+    enviarEmailBienvenidaInstructor({ email: result.user.email, nombre: result.user.nombre })
+      .then(r => {
+        if (r?.ok) {
+          console.log('[auth][confirmar] ✓ Correo de bienvenida enviado a:', result.user.email);
+        } else {
+          console.error('[auth][confirmar] ✗ Correo de bienvenida no enviado a:', result.user.email, r?.error || '');
+        }
+      })
+      .catch(err => console.error('[auth][confirmar] ✗ Error enviando bienvenida:', err.message));
   } catch (error) {
     handleAuthError(error, res);
   }
