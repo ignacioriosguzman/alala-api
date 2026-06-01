@@ -51,7 +51,7 @@ async function send({ to, subject, html }) {
 
   const body = {
     personalizations: [{ to: [{ email: to }] }],
-    from: { email: cfg.from, name: 'ALALÁ Chile' },
+    from: { email: cfg.from, name: 'ALALA Chile' },
     subject,
     content: [{ type: 'text/html', value: html }],
   };
@@ -142,13 +142,13 @@ export async function enviarEmailConfirmacionCompra({
 export async function enviarEmailBienvenidaInstructor({ email, nombre }) {
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
-      <h2>¡Bienvenido a ALALÁ, ${esc(nombre)}!</h2>
+      <h2>¡Bienvenido a ALALA, ${esc(nombre)}!</h2>
       <p>Estamos emocionados de tenerte como instructor en nuestra plataforma.</p>
       <p>Desde ahora puedes crear cursos, gestionar tus alumnos y hacer crecer tu comunidad.</p>
       <p>Si tienes dudas, escríbenos a <a href="mailto:hola@alala.cl">hola@alala.cl</a>.</p>
     </div>
   `;
-  return send({ to: email, subject: 'Bienvenido a ALALÁ como instructor', html });
+  return send({ to: email, subject: 'Bienvenido a ALALA como instructor', html });
 }
 
 export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {
@@ -162,7 +162,7 @@ export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
         <tr>
           <td style="background:#D4705A;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
-            <p style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.03em">ALALÁ</p>
+            <p style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.03em">ALALA</p>
             <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.75);letter-spacing:.05em;text-transform:uppercase">Recuperación de contraseña</p>
           </td>
         </tr>
@@ -171,7 +171,7 @@ export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {
             <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111;letter-spacing:-0.02em">Recupera tu contraseña</h1>
             <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6">
               Hola <strong style="color:#111">${esc(nombre)}</strong>,<br>
-              Recibimos una solicitud para restablecer la contraseña de tu cuenta en ALALÁ.
+              Recibimos una solicitud para restablecer la contraseña de tu cuenta en ALALA.
             </p>
             <table cellpadding="0" cellspacing="0" style="margin:28px 0">
               <tr>
@@ -198,7 +198,7 @@ export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {
             <p style="margin:0 0 4px;font-size:13px;color:#9ca3af">
               ¿Tienes dudas? <a href="mailto:contacto@alala.cl" style="color:#D4705A;text-decoration:none">contacto@alala.cl</a>
             </p>
-            <p style="margin:0;font-size:12px;color:#d1d5db">ALALÁ Chile · <a href="https://alala.cl" style="color:#d1d5db">alala.cl</a></p>
+            <p style="margin:0;font-size:12px;color:#d1d5db">ALALA Chile · <a href="https://alala.cl" style="color:#d1d5db">alala.cl</a></p>
           </td>
         </tr>
       </table>
@@ -207,7 +207,7 @@ export async function enviarEmailRecuperacion({ email, nombre, resetUrl }) {
 </body>
 </html>
   `;
-  return send({ to: email, subject: 'Recupera tu contraseña de ALALÁ', html });
+  return send({ to: email, subject: 'Recupera tu contraseña de ALALA', html });
 }
 
 export async function enviarEmailVerificacionInstructor({ email, nombre, confirmUrl }) {
@@ -221,7 +221,7 @@ export async function enviarEmailVerificacionInstructor({ email, nombre, confirm
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
         <tr>
           <td style="background:#D4705A;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
-            <p style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.03em">ALALÁ</p>
+            <p style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.03em">ALALA</p>
             <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.75);letter-spacing:.05em;text-transform:uppercase">Plataforma de cursos culturales</p>
           </td>
         </tr>
@@ -229,7 +229,7 @@ export async function enviarEmailVerificacionInstructor({ email, nombre, confirm
           <td style="background:#fff;padding:40px 40px 32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb">
             <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111">Confirma tu cuenta de instructor</h1>
             <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6">
-              Hola <strong style="color:#111">${esc(nombre)}</strong>, ¡bienvenido a ALALÁ!<br>
+              Hola <strong style="color:#111">${esc(nombre)}</strong>, ¡bienvenido a ALALA!<br>
               Para activar tu cuenta y comenzar a publicar cursos, confirma tu correo.
             </p>
             <table cellpadding="0" cellspacing="0" style="margin:28px 0">
@@ -257,7 +257,7 @@ export async function enviarEmailVerificacionInstructor({ email, nombre, confirm
             <p style="margin:0 0 4px;font-size:13px;color:#9ca3af">
               ¿Tienes dudas? <a href="mailto:contacto@alala.cl" style="color:#D4705A;text-decoration:none">contacto@alala.cl</a>
             </p>
-            <p style="margin:0;font-size:12px;color:#d1d5db">ALALÁ Chile · <a href="https://alala.cl" style="color:#d1d5db">alala.cl</a></p>
+            <p style="margin:0;font-size:12px;color:#d1d5db">ALALA Chile · <a href="https://alala.cl" style="color:#d1d5db">alala.cl</a></p>
           </td>
         </tr>
       </table>
@@ -266,7 +266,7 @@ export async function enviarEmailVerificacionInstructor({ email, nombre, confirm
 </body>
 </html>
   `;
-  return send({ to: email, subject: 'Confirma tu cuenta de instructor en ALALÁ', html });
+  return send({ to: email, subject: 'Confirma tu cuenta de instructor en ALALA', html });
 }
 
 export async function enviarEmailRecordatorio({ email, nombre, cursoTitulo, cursoFecha, diasRestantes }) {
