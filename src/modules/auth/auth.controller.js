@@ -12,6 +12,7 @@ import prisma from "../../lib/prisma.js";
 import {
   enviarEmailRecuperacion,
   enviarEmailVerificacionInstructor,
+  enviarEmailBienvenidaInstructor,
 } from "../../services/email.service.js";
 
 const FRONTEND = process.env.FRONTEND_URL || 'https://alala.cl';
@@ -97,7 +98,7 @@ export const refresh = async (req, res) => {
     if (!refreshToken) return res.status(400).json({ error: 'refreshToken requerido' });
     const result = await refreshAccessToken(refreshToken);
     if (!result) return res.status(401).json({ error: 'Token inválido o expirado' });
-    res.json({ accessToken: result.accessToken, user: userPublic(result.user) });
+    res.json({ accessToken: result.accessToken, refreshToken: result.refreshToken, user: userPublic(result.user) });
   } catch (error) {
     handleAuthError(error, res);
   }
@@ -119,19 +120,13 @@ export const forgotPassword = async (req, res) => {
   try {
     const email = (req.body.email || '').trim();
     if (!email) return res.status(400).json({ error: 'Email requerido' });
-    console.log('[auth][forgotPassword] Solicitud recibida para email:', email);
-
     const result = await generarTokenReset(email);
 
     // Responder inmediatamente — no bloquear esperando al servidor SMTP
     res.json({ message: 'Si el correo está registrado, recibirás un enlace de recuperación.' });
 
-    if (!result) {
-      // generarTokenReset ya logueó el motivo exacto (email inválido o usuario no encontrado)
-      return;
-    }
+    if (!result) return;
 
-    console.log('[auth][forgotPassword] Iniciando envío de correo a:', result.user.email);
     const resetUrl = `${FRONTEND}/reset-password.html?id=${result.user.id}&token=${encodeURIComponent(result.token)}`;
     enviarEmailRecuperacion({ email: result.user.email, nombre: result.user.nombre, resetUrl })
       .then(r => {
@@ -172,7 +167,19 @@ export const confirmar = async (req, res) => {
     if (result.ya_verificado) {
       return res.json({ ok: true, message: 'Tu cuenta ya estaba confirmada. Puedes iniciar sesión.' });
     }
+
     res.json({ ok: true, message: '¡Cuenta confirmada! Ya puedes iniciar sesión como instructor.' });
+
+    // Correo de bienvenida — solo en la primera confirmación, en background
+    enviarEmailBienvenidaInstructor({ email: result.user.email, nombre: result.user.nombre })
+      .then(r => {
+        if (r?.ok) {
+          console.log('[auth][confirmar] ✓ Correo de bienvenida enviado a:', result.user.email);
+        } else {
+          console.error('[auth][confirmar] ✗ Correo de bienvenida no enviado a:', result.user.email, r?.error || '');
+        }
+      })
+      .catch(err => console.error('[auth][confirmar] ✗ Error enviando bienvenida:', err.message));
   } catch (error) {
     handleAuthError(error, res);
   }

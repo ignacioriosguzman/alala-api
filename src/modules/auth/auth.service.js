@@ -11,11 +11,28 @@ function validarDatosUsuario({ nombre, email, password }) {
   if (!password || password.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres");
 }
 
+const REFRESH_EXPIRY_DAYS = 7;
+
+function refreshExpiresAt() {
+  const d = new Date();
+  d.setDate(d.getDate() + REFRESH_EXPIRY_DAYS);
+  return d;
+}
+
 async function generarTokens(user) {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
-  await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id } });
+  await prisma.refreshToken.create({
+    data: { token: refreshToken, userId: user.id, expiresAt: refreshExpiresAt() },
+  });
   return { accessToken, refreshToken };
+}
+
+export async function limpiarTokensExpirados() {
+  const { count } = await prisma.refreshToken.deleteMany({
+    where: { expiresAt: { lt: new Date() } },
+  });
+  return count;
 }
 
 // El secreto incluye el email del usuario: si cambia el email, el token queda inválido
@@ -35,7 +52,7 @@ export const registerUser = async (data) => {
   validarDatosUsuario(data);
   const existe = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } });
   if (existe) throw new Error("Este email ya está registrado");
-  const hashed = await bcrypt.hash(data.password, 10);
+  const hashed = await bcrypt.hash(data.password, 12);
   const user = await prisma.user.create({
     data: { nombre: data.nombre.trim(), email: data.email.toLowerCase(), password: hashed }
   });
@@ -47,7 +64,7 @@ export const registerInstructor = async (data) => {
   validarDatosUsuario(data);
   const existe = await prisma.user.findUnique({ where: { email: data.email.toLowerCase() } });
   if (existe) throw new Error("Este email ya está registrado");
-  const hashed = await bcrypt.hash(data.password, 10);
+  const hashed = await bcrypt.hash(data.password, 12);
   const user = await prisma.user.create({
     data: {
       nombre: data.nombre.trim(),
@@ -80,23 +97,36 @@ export const loginUser = async (email, password) => {
 
 export const refreshAccessToken = async (refreshToken) => {
   if (!refreshToken) return null;
+  try {
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+  } catch {
+    return null;
+  }
   const stored = await prisma.refreshToken.findUnique({ where: { token: refreshToken } });
   if (!stored) return null;
   const user = await prisma.user.findUnique({ where: { id: stored.userId } });
   if (!user) return null;
+  // Rotate: delete old token and issue new one with expiry
+  await prisma.refreshToken.delete({ where: { id: stored.id } });
+  const newRefreshToken = generateRefreshToken(user);
+  await prisma.refreshToken.create({
+    data: { token: newRefreshToken, userId: user.id, expiresAt: refreshExpiresAt() },
+  });
   const accessToken = generateAccessToken(user);
-  return { accessToken, user };
+  return { accessToken, refreshToken: newRefreshToken, user };
 };
 
 export const confirmarEmailInstructor = async (token) => {
-  // Decodificar sin verificar para obtener el id
   let payload;
   try {
     payload = jwt.decode(token);
   } catch {
     throw new Error('Token inválido');
   }
-  if (!payload?.id || payload.type !== 'verify') throw new Error('Token inválido');
+  // Validar estructura antes de cualquier query a la BD
+  if (!payload?.id || typeof payload.id !== 'number' || payload.id <= 0 || payload.type !== 'verify') {
+    throw new Error('Token inválido');
+  }
 
   const user = await prisma.user.findUnique({ where: { id: payload.id } });
   if (!user) throw new Error('Usuario no encontrado');
@@ -129,21 +159,12 @@ export const reenviarConfirmacion = async (email) => {
 // Forgot password: token JWT de un solo uso firmado con JWT_SECRET + hash_password
 export const generarTokenReset = async (email) => {
   const emailNorm = (email || '').trim().toLowerCase();
-  if (!emailNorm || !EMAIL_RE.test(emailNorm)) {
-    console.warn('[auth][generarTokenReset] Email inválido o vacío — raw recibido:', JSON.stringify(email));
-    return null;
-  }
-  console.log('[auth][generarTokenReset] Buscando usuario con email normalizado:', emailNorm);
+  if (!emailNorm || !EMAIL_RE.test(emailNorm)) return null;
   const user = await prisma.user.findUnique({ where: { email: emailNorm } });
-  if (!user) {
-    console.warn('[auth][generarTokenReset] Usuario no encontrado para email:', emailNorm);
-    return null;
-  }
-  console.log('[auth][generarTokenReset] ✓ Usuario encontrado — id:', user.id, '| role:', user.role, '| verificado:', user.verificado);
+  if (!user) return null;
 
   const secret = process.env.JWT_SECRET + user.password;
   const token = jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '1h' });
-  console.log('[auth][generarTokenReset] ✓ Token generado. Procediendo a enviar correo.');
   return { token, user };
 };
 
@@ -160,7 +181,7 @@ export const resetPassword = async (userId, token, newPassword) => {
     throw new Error("El enlace de recuperación es inválido o ha expirado");
   }
 
-  const hashed = await bcrypt.hash(newPassword, 10);
+  const hashed = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
   await prisma.refreshToken.deleteMany({ where: { userId } });
   return true;

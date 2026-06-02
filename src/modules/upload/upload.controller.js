@@ -1,16 +1,41 @@
 import { subirArchivoDrive, generarVistaPrevia } from '../../services/googleDrive.service.js';
+import { detectarFormato, procesarAvatar, buildAvatarUrl } from '../../services/imageProcessing.service.js';
+import prisma from '../../lib/prisma.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-/**
- * Extrae un Buffer desde un string base64 enviado en el body.
- * Soporta data URLs: data:application/pdf;base64,JVBERi0xLjQ...
- */
 const bufferDesdeBase64 = (base64Input) => {
   if (!base64Input) throw new Error('No se recibió contenido del archivo');
   const base64 = base64Input.includes(',') ? base64Input.split(',')[1] : base64Input;
   return Buffer.from(base64, 'base64');
 };
+
+// Validación por magic bytes (primeros bytes del archivo real, no el mimeType declarado)
+const MAGIC = {
+  pdf:  { bytes: [0x25, 0x50, 0x44, 0x46], label: 'PDF' },           // %PDF
+  jpeg: { bytes: [0xFF, 0xD8, 0xFF],        label: 'JPEG' },
+  png:  { bytes: [0x89, 0x50, 0x4E, 0x47], label: 'PNG' },
+  webp: { bytes: [0x52, 0x49, 0x46, 0x46], label: 'WebP', extraOffset: 8, extraBytes: [0x57, 0x45, 0x42, 0x50] },
+};
+
+function validarMagicBytes(buffer, tipo) {
+  const check = (magic) => magic.bytes.every((b, i) => buffer[i] === b);
+  if (tipo === 'pdf') return check(MAGIC.pdf);
+  if (tipo === 'imagen') {
+    if (check(MAGIC.jpeg)) return true;
+    if (check(MAGIC.png)) return true;
+    // WebP: "RIFF" en offset 0 + "WEBP" en offset 8
+    if (check(MAGIC.webp)) {
+      const { extraOffset, extraBytes } = MAGIC.webp;
+      return extraBytes.every((b, i) => buffer[extraOffset + i] === b);
+    }
+    return false;
+  }
+  return false;
+}
+
+const MAX_PDF_BYTES  = 50 * 1024 * 1024;  // 50 MB
+const MAX_IMG_BYTES  = 10 * 1024 * 1024;  // 10 MB
 
 const handleError = (error, res) => {
   console.error('[Upload] Error:', error.message);
@@ -33,12 +58,15 @@ export const subirPdf = async (req, res) => {
     const { fileBase64, fileName = `documento-${Date.now()}.pdf` } = req.body;
     const buffer = bufferDesdeBase64(fileBase64);
 
-    const resultado = await subirArchivoDrive(buffer, fileName, 'application/pdf');
+    if (buffer.length > MAX_PDF_BYTES) {
+      return res.status(400).json({ error: 'El archivo supera el límite de 50 MB' });
+    }
+    if (!validarMagicBytes(buffer, 'pdf')) {
+      return res.status(400).json({ error: 'El archivo no es un PDF válido' });
+    }
 
-    res.status(201).json({
-      message: 'PDF subido correctamente',
-      archivo: resultado,
-    });
+    const resultado = await subirArchivoDrive(buffer, fileName, 'application/pdf');
+    res.status(201).json({ message: 'PDF subido correctamente', archivo: resultado });
   } catch (error) {
     handleError(error, res);
   }
@@ -55,12 +83,15 @@ export const generarPreview = async (req, res) => {
     const { fileBase64 } = req.body;
     const buffer = bufferDesdeBase64(fileBase64);
 
-    const previews = await generarVistaPrevia(buffer);
+    if (buffer.length > MAX_PDF_BYTES) {
+      return res.status(400).json({ error: 'El archivo supera el límite de 50 MB' });
+    }
+    if (!validarMagicBytes(buffer, 'pdf')) {
+      return res.status(400).json({ error: 'El archivo no es un PDF válido' });
+    }
 
-    res.json({
-      message: 'Vistas previa generadas',
-      previews,
-    });
+    const previews = await generarVistaPrevia(buffer);
+    res.json({ message: 'Vistas previa generadas', previews });
   } catch (error) {
     handleError(error, res);
   }
@@ -72,23 +103,73 @@ export const generarPreview = async (req, res) => {
  *
  * Body: { fileBase64: string, fileName?: string, mimeType?: string }
  */
+const MIME_IMAGEN = { 'image/jpeg': true, 'image/png': true, 'image/webp': true };
+
 export const subirPortada = async (req, res) => {
   try {
     const { fileBase64, fileName = `portada-${Date.now()}.jpg`, mimeType = 'image/jpeg' } = req.body;
+
+    if (!MIME_IMAGEN[mimeType]) {
+      return res.status(400).json({ error: 'Tipo de imagen no permitido. Usa JPEG, PNG o WebP.' });
+    }
+
     const buffer = bufferDesdeBase64(fileBase64);
 
-    const resultado = await subirArchivoDrive(buffer, fileName, mimeType);
+    if (buffer.length > MAX_IMG_BYTES) {
+      return res.status(400).json({ error: 'La imagen supera el límite de 10 MB' });
+    }
+    if (!validarMagicBytes(buffer, 'imagen')) {
+      return res.status(400).json({ error: 'El archivo no es una imagen válida (JPEG, PNG o WebP)' });
+    }
 
-    res.status(201).json({
-      message: 'Portada subida correctamente',
-      archivo: resultado,
-    });
+    const resultado = await subirArchivoDrive(buffer, fileName, mimeType);
+    res.status(201).json({ message: 'Portada subida correctamente', archivo: resultado });
   } catch (error) {
     handleError(error, res);
   }
 };
 
-// TODO: Cuando se instale multer, reemplazar el body base64 por:
-// import multer from 'multer';
-// const upload = multer({ storage: multer.memoryStorage() });
-// router.post('/pdf', upload.single('file'), subirPdf);
+// ── Avatar ────────────────────────────────────────────────────────────────────
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
+const FORMATOS_PERMITIDOS = new Set(["jpeg", "png", "webp"]);
+
+/**
+ * POST /upload/avatar
+ * Recibe multipart/form-data con campo "avatar".
+ * Procesa con sharp: 512×512, WebP, calidad 75.
+ * Actualiza el campo avatar del CreatorProfile del usuario autenticado.
+ */
+export const subirAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No se recibió ningún archivo. Campo requerido: avatar" });
+    }
+
+    const buffer = req.file.buffer;
+
+    if (buffer.length > MAX_AVATAR_BYTES) {
+      return res.status(400).json({ error: "La imagen supera el límite de 2 MB" });
+    }
+
+    const formato = detectarFormato(buffer);
+    if (!FORMATOS_PERMITIDOS.has(formato)) {
+      return res.status(400).json({ error: "Formato no permitido. Usa JPG, PNG o WebP." });
+    }
+
+    const { filename } = await procesarAvatar(buffer, req.user.id);
+    const avatarUrl = buildAvatarUrl(filename, req);
+
+    // Actualizar o crear el perfil del creador con la nueva URL
+    await prisma.creatorProfile.upsert({
+      where: { userId: req.user.id },
+      create: { userId: req.user.id, nombrePublico: req.user.nombre, avatar: avatarUrl },
+      update: { avatar: avatarUrl },
+    });
+
+    res.json({ ok: true, avatarUrl });
+  } catch (error) {
+    console.error("[Upload] Avatar error:", error.message);
+    res.status(500).json({ error: "Error al procesar la imagen" });
+  }
+};

@@ -34,7 +34,15 @@ export const getCurso = (id) => prisma.course.findUnique({ where: { id: Number(i
 export const createCurso = (data) => prisma.course.create({ data: sanitize(data) });
 export const updateCurso = (id, data) =>
   prisma.course.update({ where: { id: Number(id) }, data: sanitize(data) });
-export const deleteCurso = (id) => prisma.course.delete({ where: { id: Number(id) } });
+export const deleteCurso = (id) =>
+  prisma.$transaction([
+    prisma.favorite.deleteMany({ where: { courseId: Number(id) } }),
+    prisma.review.deleteMany({ where: { cursoId: Number(id) } }),
+    prisma.enrollment.deleteMany({ where: { courseId: Number(id) } }),
+    prisma.venta.deleteMany({ where: { courseId: Number(id) } }),
+    prisma.mensaje.deleteMany({ where: { cursoId: Number(id) } }),
+    prisma.course.delete({ where: { id: Number(id) } }),
+  ]);
 
 export const upsellRecomendaciones = async (id, limit = 3) => {
   const curso = await prisma.course.findUnique({ where: { id: Number(id) } });

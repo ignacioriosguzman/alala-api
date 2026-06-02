@@ -26,6 +26,9 @@ export const obtener = async (req, res) => {
   try {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID inválido' });
+    if (req.user.role !== 'ADMIN' && req.user.id !== id) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const data = await getUsuario(id);
     if (!data) return res.status(404).json({ error: 'Usuario no encontrado' });
     res.json(data);
@@ -38,7 +41,11 @@ export const actualizar = async (req, res) => {
   try {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID inválido' });
-    const data = await updateUsuario(id, req.body);
+    const isAdmin = req.user.role === 'ADMIN';
+    if (!isAdmin && req.user.id !== id) {
+      return res.status(403).json({ error: 'Solo puedes modificar tu propio perfil' });
+    }
+    const data = await updateUsuario(id, req.body, isAdmin);
     res.json(data);
   } catch (error) {
     handleError(error, res);
