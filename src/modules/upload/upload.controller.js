@@ -54,6 +54,15 @@ const handleError = (error, res) => {
  *
  * Body: { fileBase64: string, fileName?: string }
  */
+const DRIVE_TIMEOUT_MS = 25000;
+
+function conTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Drive timeout')), ms)),
+  ]);
+}
+
 export const subirPdf = async (req, res) => {
   try {
     const { fileBase64, fileName = `documento-${Date.now()}.pdf` } = req.body;
@@ -66,13 +75,27 @@ export const subirPdf = async (req, res) => {
       return res.status(400).json({ error: 'El archivo no es un PDF válido' });
     }
 
-    const resultado = await subirArchivoDrive(buffer, fileName, 'application/pdf');
-    if (!resultado?.downloadUrl) {
-      return res.status(500).json({ error: 'El PDF se subió pero no se obtuvo URL de descarga' });
+    // Intentar subir a Drive con timeout; si falla, retornar como base64 data URL
+    try {
+      const resultado = await conTimeout(
+        subirArchivoDrive(buffer, fileName, 'application/pdf'),
+        DRIVE_TIMEOUT_MS
+      );
+      if (resultado?.downloadUrl) {
+        return res.status(201).json({ message: 'PDF subido correctamente', archivo: resultado });
+      }
+    } catch (driveErr) {
+      console.warn('[Upload] Drive no disponible, usando base64:', driveErr.message);
     }
-    res.status(201).json({ message: 'PDF subido correctamente', archivo: resultado });
+
+    // Fallback: almacenar como data URL base64 (hasta 50 MB)
+    const dataUrl = `data:application/pdf;base64,${buffer.toString('base64')}`;
+    return res.status(201).json({
+      message: 'PDF guardado correctamente',
+      archivo: { url: dataUrl, downloadUrl: dataUrl, webViewLink: dataUrl },
+    });
   } catch (error) {
-    console.error('[Upload] subirPdf error:', error.message, error.response?.data?.error);
+    console.error('[Upload] subirPdf error:', error.message);
     handleError(error, res);
   }
 };
