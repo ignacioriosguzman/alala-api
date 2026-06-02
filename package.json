@@ -26,6 +26,7 @@
     "nodemailer": "^8.0.9",
     "prisma": "^5.13.0",
     "puppeteer": "^22.0.0",
+    "googleapis": "^144.0.0",
     "sharp": "^0.33.4"
   },
   "devDependencies": {

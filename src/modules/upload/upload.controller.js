@@ -1,6 +1,7 @@
 import { subirArchivoDrive, generarVistaPrevia } from '../../services/googleDrive.service.js';
 import { detectarFormato, procesarAvatar, buildAvatarUrl } from '../../services/imageProcessing.service.js';
 import prisma from '../../lib/prisma.js';
+import sharp from 'sharp';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -122,7 +123,13 @@ export const subirPortada = async (req, res) => {
       return res.status(400).json({ error: 'El archivo no es una imagen válida (JPEG, PNG o WebP)' });
     }
 
-    const resultado = await subirArchivoDrive(buffer, fileName, mimeType);
+    // Redimensionar a máximo 1200px y comprimir antes de subir
+    const compressed = await sharp(buffer)
+      .resize({ width: 1200, withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    const resultado = await subirArchivoDrive(compressed, fileName.replace(/\.[^.]+$/, '.jpg'), 'image/jpeg');
     res.status(201).json({ message: 'Portada subida correctamente', archivo: resultado });
   } catch (error) {
     handleError(error, res);

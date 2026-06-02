@@ -36,12 +36,13 @@ export const createContenido = (data, creatorId) => {
 };
 
 export const listarCatalogo = async (query) => {
-  const { tipo, categoria, precioMin, precioMax, busqueda, orden } = query;
+  const { tipo, categoria, precioMin, precioMax, busqueda, orden, creadorId } = query;
 
   const where = { status: "activo" };
 
   if (tipo) where.tipo = tipo;
   if (categoria) where.categoria = categoria;
+  if (creadorId) where.creatorId = Number(creadorId);
 
   if (precioMin !== undefined || precioMax !== undefined) {
     where.precio = {};
@@ -65,7 +66,12 @@ export const listarCatalogo = async (query) => {
   return prisma.contenidoDigital.findMany({
     where,
     orderBy,
-    include: {
+    select: {
+      id: true, titulo: true, descripcion: true, tipo: true, categoria: true,
+      subcategoria: true, precio: true, precioOferta: true, portadaUrl: true,
+      paginas: true, tamanoMb: true, idioma: true, nivel: true, status: true,
+      ventas: true, rating: true, reviews: true, palabrasClave: true,
+      createdAt: true, creatorId: true,
       creator: { select: { id: true, nombre: true } },
     },
   });
