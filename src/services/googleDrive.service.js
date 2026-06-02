@@ -42,7 +42,7 @@ export const subirArchivoDrive = async (fileBuffer, fileName, mimeType) => {
 
   return {
     id: fileId,
-    url: `https://drive.google.com/uc?id=${fileId}&export=view`,
+    url: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`,
     downloadUrl: `https://drive.google.com/uc?id=${fileId}&export=download`,
     webViewLink: response.data.webViewLink,
   };
