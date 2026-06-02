@@ -20,7 +20,7 @@ import {
 } from "./microcontenidos.service.js";
 
 const handleError = (error, res) => {
-  if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
+  if (error.name?.startsWith?.('Prisma') || String(error.code ?? '').startsWith('P')) {
     console.error('[MicroContenido] Error de Prisma:', error.message);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }

@@ -185,6 +185,10 @@ export const confirmar = async (req, res) => {
   }
 };
 
+export const me = async (req, res) => {
+  res.json({ user: userPublic(req.user) });
+};
+
 export const reenviar = async (req, res) => {
   try {
     const { email } = req.body;

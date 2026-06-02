@@ -19,6 +19,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('[FATAL] Promesa rechazada no capturada:', reason);
   process.exit(1);
 });
+import prisma from "./lib/prisma.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
 import cursosRoutes from "./modules/cursos/cursos.routes.js";
@@ -110,8 +111,8 @@ app.use(cors({
   origin: ['https://alala.cl', 'https://app.alala.cl'],
   credentials: true,
 }));
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(express.json({ limit: '75mb' }));
+app.use(express.urlencoded({ extended: true, limit: '75mb' }));
 
 // ── Archivos estáticos — avatares optimizados ──────────────────────────────
 // src/ → ../ → alala-api root → uploads/avatars
@@ -176,4 +177,15 @@ app.listen(PORT, () => {
   setInterval(() => {
     limpiarTokensExpirados().catch(() => {});
   }, 24 * 60 * 60 * 1000);
+
+  // Auto-promover ADMIN_EMAIL a rol ADMIN si no lo tiene aún
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    prisma.user.updateMany({
+      where: { email: adminEmail.toLowerCase(), role: { not: 'ADMIN' } },
+      data: { role: 'ADMIN' },
+    }).then(r => {
+      if (r.count > 0) console.log(`[startup] ✓ Usuario ${adminEmail} promovido a ADMIN automáticamente.`);
+    }).catch(() => {});
+  }
 });

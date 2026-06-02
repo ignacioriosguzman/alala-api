@@ -30,7 +30,10 @@ const sanitize = (data) => {
 };
 
 export const getCursos = () => prisma.course.findMany({ orderBy: { createdAt: "desc" } });
-export const getCurso = (id) => prisma.course.findUnique({ where: { id: Number(id) } });
+export const getCurso = (id) => prisma.course.findUnique({
+  where: { id: Number(id) },
+  include: { _count: { select: { alumnos: true } } },
+});
 export const createCurso = (data) => prisma.course.create({ data: sanitize(data) });
 export const updateCurso = (id, data) =>
   prisma.course.update({ where: { id: Number(id) }, data: sanitize(data) });

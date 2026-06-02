@@ -40,7 +40,7 @@ const MAX_IMG_BYTES  = 10 * 1024 * 1024;  // 10 MB
 
 const handleError = (error, res) => {
   console.error('[Upload] Error:', error.message);
-  if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
+  if (error.name?.startsWith?.('Prisma') || String(error.code ?? '').startsWith('P')) {
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
   res.status(400).json({ error: error.message });
@@ -123,14 +123,14 @@ export const subirPortada = async (req, res) => {
       return res.status(400).json({ error: 'El archivo no es una imagen válida (JPEG, PNG o WebP)' });
     }
 
-    // Redimensionar a máximo 1200px y comprimir antes de subir
+    // Comprimir a máximo 800px y devolver como base64 (Drive personal no acepta service accounts)
     const compressed = await sharp(buffer)
-      .resize({ width: 1200, withoutEnlargement: true })
-      .jpeg({ quality: 85 })
+      .resize({ width: 800, withoutEnlargement: true })
+      .jpeg({ quality: 78 })
       .toBuffer();
 
-    const resultado = await subirArchivoDrive(compressed, fileName.replace(/\.[^.]+$/, '.jpg'), 'image/jpeg');
-    res.status(201).json({ message: 'Portada subida correctamente', archivo: resultado });
+    const dataUrl = `data:image/jpeg;base64,${compressed.toString('base64')}`;
+    res.status(201).json({ message: 'Portada procesada correctamente', archivo: { url: dataUrl, webViewLink: dataUrl } });
   } catch (error) {
     handleError(error, res);
   }

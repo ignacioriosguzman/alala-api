@@ -9,7 +9,9 @@ import {
   doResetPassword,
   confirmar,
   reenviar,
+  me,
 } from "./auth.controller.js";
+import { authGuard } from "../../middlewares/authGuard.js";
 
 const router = express.Router();
 
@@ -22,5 +24,6 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", doResetPassword);
 router.get("/confirmar", confirmar);
 router.post("/reenviar-confirmacion", reenviar);
+router.get("/me", authGuard, me);
 
 export default router;

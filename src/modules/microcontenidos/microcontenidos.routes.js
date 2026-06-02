@@ -24,32 +24,32 @@ import {
 
 const router = express.Router();
 
+// Rutas específicas PRIMERO (antes de /:id para evitar conflictos)
+router.get("/mis-microcontenidos", authGuard, misMicros);
+router.get("/favoritos/mis-favoritos", authGuard, misFavoritos);
+router.get("/mis-compras", authGuard, misCompras);
+
 // Públicos
 router.get("/", listar);
 router.get("/tipo/:tipo", porTipo);
 router.get("/:id", obtener);
 router.get("/:id/upsell", upsell);
 router.get("/:id/progreso", obtenerProgreso);
+router.get("/:id/favorito/check", authGuard, checkFavorito);
+router.get("/:id/compra/check", checkCompra);
 
 // Requieren auth
 router.post("/", authGuard, roleGuard("INSTRUCTOR", "ADMIN"), crear);
-router.get("/mis-microcontenidos", authGuard, misMicros);
 router.patch("/:id", authGuard, editar);
 router.patch("/:id/publicado", authGuard, cambiarPublicado);
 router.delete("/:id", authGuard, eliminar);
 
-// Favoritos
+// Favoritos y progreso
 router.post("/:id/favorito", authGuard, toggleFavorito);
-router.get("/favoritos/mis-favoritos", authGuard, misFavoritos);
-router.get("/:id/favorito/check", authGuard, checkFavorito);
-
-// Progreso
 router.post("/:id/progreso", guardarProgreso);
 
 // Compras
 router.post("/:id/comprar", authGuard, comprar);
 router.post("/:id/comprar-invitado", comprarInvitado);
-router.get("/:id/compra/check", checkCompra);
-router.get("/mis-compras", authGuard, misCompras);
 
 export default router;
