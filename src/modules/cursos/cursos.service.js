@@ -29,11 +29,78 @@ const sanitize = (data) => {
   return clean;
 };
 
-export const getCursos = () => prisma.course.findMany({ orderBy: { createdAt: "desc" } });
-export const getCurso = (id) => prisma.course.findUnique({
-  where: { id: Number(id) },
-  include: { _count: { select: { alumnos: true } } },
-});
+export const getCursos = async () => {
+  const [courses, contenidos] = await Promise.all([
+    prisma.course.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.contenidoDigital.findMany({
+      where: { status: "activo" },
+      orderBy: { createdAt: "desc" },
+      include: { creator: { select: { nombre: true } } },
+    }),
+  ]);
+
+  // Normalizar ContenidoDigital con la misma estructura que Course
+  const contenidosComo = contenidos.map(c => ({
+    id: c.id,
+    titulo: c.titulo,
+    descripcion: c.descripcion,
+    descripcion_larga: c.descripcionLarga ?? null,
+    instructor: c.creator?.nombre ?? "Creador ALALA",
+    categoria: c.categoria,
+    precio: c.precioOferta ?? c.precio,
+    imagen: c.portadaUrl ?? null,
+    modalidad: "online",
+    nivel: c.nivel ?? "todos",
+    duracion: null,
+    ciudad: null,
+    lat: null,
+    lng: null,
+    direccion: null,
+    _tipo: "contenido",
+    _subtipo: c.tipo,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  }));
+
+  const cursosConTipo = courses.map(c => ({ ...c, _tipo: "curso" }));
+  return [...cursosConTipo, ...contenidosComo];
+};
+export const getCurso = async (id) => {
+  const course = await prisma.course.findUnique({
+    where: { id: Number(id) },
+    include: { _count: { select: { alumnos: true } } },
+  });
+  if (course) return { ...course, _tipo: "curso" };
+
+  // Fallback: buscar en ContenidoDigital si no existe como Course
+  const c = await prisma.contenidoDigital.findUnique({
+    where: { id: Number(id), status: "activo" },
+    include: { creator: { select: { nombre: true } } },
+  });
+  if (!c) return null;
+  return {
+    id: c.id,
+    titulo: c.titulo,
+    descripcion: c.descripcion,
+    descripcion_larga: c.descripcionLarga ?? null,
+    instructor: c.creator?.nombre ?? "Creador ALALA",
+    categoria: c.categoria,
+    precio: c.precioOferta ?? c.precio,
+    imagen: c.portadaUrl ?? null,
+    modalidad: "online",
+    nivel: c.nivel ?? "todos",
+    duracion: null,
+    ciudad: null,
+    lat: null,
+    lng: null,
+    _tipo: "contenido",
+    _subtipo: c.tipo,
+    pdfUrl: c.pdfUrl,
+    _count: { alumnos: c.ventas ?? 0 },
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
+};
 export const createCurso = (data) => prisma.course.create({ data: sanitize(data) });
 export const updateCurso = (id, data) =>
   prisma.course.update({ where: { id: Number(id) }, data: sanitize(data) });
