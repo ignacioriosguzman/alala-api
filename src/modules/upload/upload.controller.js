@@ -67,8 +67,12 @@ export const subirPdf = async (req, res) => {
     }
 
     const resultado = await subirArchivoDrive(buffer, fileName, 'application/pdf');
+    if (!resultado?.downloadUrl) {
+      return res.status(500).json({ error: 'El PDF se subió pero no se obtuvo URL de descarga' });
+    }
     res.status(201).json({ message: 'PDF subido correctamente', archivo: resultado });
   } catch (error) {
+    console.error('[Upload] subirPdf error:', error.message, error.response?.data?.error);
     handleError(error, res);
   }
 };

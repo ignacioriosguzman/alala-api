@@ -17,24 +17,36 @@ export const subirArchivoDrive = async (fileBuffer, fileName, mimeType) => {
   const auth = getAuth();
   const drive = google.drive({ version: 'v3', auth });
 
-  const fileMetadata = {
-    name: fileName,
-    ...(FOLDER_ID ? { parents: [FOLDER_ID] } : {}),
-  };
+  const media = { mimeType, body: Readable.from(fileBuffer) };
 
-  const media = {
-    mimeType,
-    body: Readable.from(fileBuffer),
-  };
-
-  const response = await drive.files.create({
-    requestBody: fileMetadata,
-    media,
-    fields: 'id, webViewLink, webContentLink',
-  });
+  // Intentar subir a la carpeta configurada; si falla (carpeta no compartida), subir al root
+  let response;
+  if (FOLDER_ID) {
+    try {
+      response = await drive.files.create({
+        requestBody: { name: fileName, parents: [FOLDER_ID] },
+        media,
+        fields: 'id, webViewLink, webContentLink',
+      });
+    } catch (e) {
+      if (e?.response?.data?.error?.code === 404 || e?.response?.data?.error?.code === 403) {
+        console.warn(`[Drive] Carpeta ${FOLDER_ID} inaccesible (${e.response.data.error.code}), subiendo al root del service account.`);
+        response = await drive.files.create({
+          requestBody: { name: fileName },
+          media,
+          fields: 'id, webViewLink, webContentLink',
+        });
+      } else throw e;
+    }
+  } else {
+    response = await drive.files.create({
+      requestBody: { name: fileName },
+      media,
+      fields: 'id, webViewLink, webContentLink',
+    });
+  }
 
   const fileId = response.data.id;
-
   await drive.permissions.create({
     fileId,
     requestBody: { role: 'reader', type: 'anyone' },
