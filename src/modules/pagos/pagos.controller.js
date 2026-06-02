@@ -89,7 +89,7 @@ export const confirmarPago = async (req, res) => {
     const estado = ESTADO_FLOW[flowStatus.status] ?? 'DESCONOCIDO';
 
     // ── Determinar si es compra de curso o de contenido digital ──────────────
-    const compraContenido = await prisma.compraContenido.findUnique({ where: { flowToken: token } });
+    const compraContenido = await prisma.compraContenido.findFirst({ where: { flowToken: token } });
 
     if (compraContenido) {
       // Pago de ContenidoDigital
@@ -166,7 +166,7 @@ export const retornoPago = async (req, res) => {
     if (!token) return res.redirect(`${baseUrl}/pago-fallido.html?error=sin_token`);
 
     // Verificar si es compra de contenido digital
-    const compraContenido = await prisma.compraContenido.findUnique({ where: { flowToken: token } });
+    const compraContenido = await prisma.compraContenido.findFirst({ where: { flowToken: token } });
     if (compraContenido) {
       if (compraContenido.estado === 'completada') {
         return res.redirect(`${baseUrl}/pago-exitoso.html?orden=${compraContenido.flowOrder}&contenido=${compraContenido.contenidoId}`);

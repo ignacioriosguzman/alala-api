@@ -262,11 +262,12 @@ model CompraContenido {
   pagoCreador        Int
   estado             String           @default("completada") // pendiente | completada | reembolsada
   downloadUrl        String?
-  flowToken          String?          @unique
+  flowToken          String?
   flowOrder          String?
   createdAt          DateTime         @default(now())
 
   @@unique([userId, contenidoId])
+  @@index([flowToken])
 }
 
 model ResenaContenido {
