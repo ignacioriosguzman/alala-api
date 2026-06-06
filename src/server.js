@@ -111,8 +111,8 @@ app.use(cors({
   origin: ['https://alala.cl', 'https://app.alala.cl'],
   credentials: true,
 }));
-app.use(express.json({ limit: '75mb' }));
-app.use(express.urlencoded({ extended: true, limit: '75mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── Archivos estáticos — avatares optimizados ──────────────────────────────
 // src/ → ../ → alala-api root → uploads/avatars

@@ -2,11 +2,21 @@ import prisma from "../../lib/prisma.js";
 
 const MONTHS_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
-// ── Toggles en memoria ────────────────────────────────────────────────────────
-export const seccionesEstado = {
-  micronovelas: true, manuales: true, cursos: true,
-  miniebooks: true, microcontenidos: true,
-};
+const SECCIONES_VALIDAS = ["micronovelas", "manuales", "cursos", "miniebooks", "microcontenidos"];
+const SECCION_PREFIX = "seccion:";
+
+// ── Helpers para SiteConfig ────────────────────────────────────────────────────
+async function leerSecciones() {
+  const rows = await prisma.siteConfig.findMany({
+    where: { clave: { startsWith: SECCION_PREFIX } },
+  });
+  const estado = Object.fromEntries(SECCIONES_VALIDAS.map(s => [s, true]));
+  for (const row of rows) {
+    const key = row.clave.slice(SECCION_PREFIX.length);
+    if (key in estado) estado[key] = row.valor === "true";
+  }
+  return estado;
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // MÉTRICAS GENERALES
@@ -31,13 +41,15 @@ export const getMetricas = async () => {
     prisma.contenidoDigital.count({ where: { status: "activo" } }),
     prisma.contenidoDigital.count({ where: { status: "borrador" } }),
   ]);
+  const seccionesEstado = await leerSecciones();
+
   return {
     totalUsuarios, totalCreadores,
     totalEstudiantes: totalUsuarios - totalCreadores - totalAdmins,
     totalAdmins, totalCursos, totalContenidos, totalMicrocursos, totalManuales,
     totalMicroContenidos, totalMicronovelas, totalMiniEbooks,
     contenidosActivos, contenidosBorrador,
-    seccionesEstado: { ...seccionesEstado },
+    seccionesEstado,
   };
 };
 
@@ -299,7 +311,7 @@ export const eliminarContenido = (id) =>
   prisma.contenidoDigital.delete({ where: { id: Number(id) } });
 
 // ════════════════════════════════════════════════════════════════════════════
-// CREADORES — listado con stats completos
+// CREADORES — listado con stats completos (4 queries en lugar de N×4)
 // ════════════════════════════════════════════════════════════════════════════
 export const getCreadores = async () => {
   const creadores = await prisma.user.findMany({
@@ -312,27 +324,58 @@ export const getCreadores = async () => {
     },
   });
 
-  // Agregar ganancias por creador
-  const results = await Promise.all(
-    creadores.map(async (c) => {
-      const [ganC, ganM, ganE, totalPagado] = await Promise.all([
-        prisma.compraContenido.aggregate({ where: { contenido: { creatorId: c.id }, estado: "completada" }, _sum: { pagoCreador: true }, _count: true }),
-        prisma.compraMicroContenido.aggregate({ where: { microContenido: { autorId: c.id }, estado: "completada" }, _sum: { pagoCreador: true }, _count: true }),
-        prisma.compraMiniEbook.aggregate({ where: { miniEbook: { autorId: c.id }, estado: "completada" }, _sum: { pagoCreador: true }, _count: true }),
-        prisma.pagoCreador.aggregate({ where: { creatorId: c.id }, _sum: { monto: true } }),
-      ]);
-      const totalGanado = (ganC._sum.pagoCreador ?? 0) + (ganM._sum.pagoCreador ?? 0) + (ganE._sum.pagoCreador ?? 0);
-      const totalVentas = (ganC._count ?? 0) + (ganM._count ?? 0) + (ganE._count ?? 0);
-      return {
-        ...c,
-        totalGanado,
-        totalVentas,
-        totalPagado: totalPagado._sum.monto ?? 0,
-        pendientePago: totalGanado - (totalPagado._sum.monto ?? 0),
-      };
-    })
-  );
-  return results.sort((a, b) => b.totalGanado - a.totalGanado);
+  if (creadores.length === 0) return [];
+
+  const ids = creadores.map(c => c.id);
+
+  // Una query por tipo — se agrupa en memoria
+  const [ventasContenido, ventasMicro, ventasEbook, pagosRealizados] = await Promise.all([
+    prisma.compraContenido.findMany({
+      where: { contenido: { creatorId: { in: ids } }, estado: "completada" },
+      select: { pagoCreador: true, contenido: { select: { creatorId: true } } },
+    }),
+    prisma.compraMicroContenido.findMany({
+      where: { microContenido: { autorId: { in: ids } }, estado: "completada" },
+      select: { pagoCreador: true, microContenido: { select: { autorId: true } } },
+    }),
+    prisma.compraMiniEbook.findMany({
+      where: { miniEbook: { autorId: { in: ids } }, estado: "completada" },
+      select: { pagoCreador: true, miniEbook: { select: { autorId: true } } },
+    }),
+    prisma.pagoCreador.findMany({
+      where: { creatorId: { in: ids } },
+      select: { creatorId: true, monto: true },
+    }),
+  ]);
+
+  // Mapas de acumulación por creatorId
+  const ganMap = new Map(ids.map(id => [id, { ganado: 0, ventas: 0 }]));
+  const pagoMap = new Map(ids.map(id => [id, 0]));
+
+  for (const v of ventasContenido) {
+    const cid = v.contenido.creatorId;
+    const entry = ganMap.get(cid);
+    if (entry) { entry.ganado += v.pagoCreador ?? 0; entry.ventas++; }
+  }
+  for (const v of ventasMicro) {
+    const cid = v.microContenido.autorId;
+    const entry = ganMap.get(cid);
+    if (entry) { entry.ganado += v.pagoCreador ?? 0; entry.ventas++; }
+  }
+  for (const v of ventasEbook) {
+    const cid = v.miniEbook.autorId;
+    const entry = ganMap.get(cid);
+    if (entry) { entry.ganado += v.pagoCreador ?? 0; entry.ventas++; }
+  }
+  for (const p of pagosRealizados) {
+    pagoMap.set(p.creatorId, (pagoMap.get(p.creatorId) ?? 0) + p.monto);
+  }
+
+  return creadores.map(c => {
+    const { ganado, ventas } = ganMap.get(c.id) ?? { ganado: 0, ventas: 0 };
+    const totalPagado = pagoMap.get(c.id) ?? 0;
+    return { ...c, totalGanado: ganado, totalVentas: ventas, totalPagado, pendientePago: ganado - totalPagado };
+  }).sort((a, b) => b.totalGanado - a.totalGanado);
 };
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -437,8 +480,12 @@ function formatUptime(sec) {
   return `${d}d ${h}h ${m}m`;
 }
 
-export const toggleSeccion = (seccion, activo) => {
-  if (!(seccion in seccionesEstado)) throw new Error(`Sección desconocida: ${seccion}`);
-  seccionesEstado[seccion] = Boolean(activo);
-  return { ...seccionesEstado };
+export const toggleSeccion = async (seccion, activo) => {
+  if (!SECCIONES_VALIDAS.includes(seccion)) throw new Error(`Sección desconocida: ${seccion}`);
+  await prisma.siteConfig.upsert({
+    where: { clave: `${SECCION_PREFIX}${seccion}` },
+    create: { clave: `${SECCION_PREFIX}${seccion}`, valor: String(Boolean(activo)) },
+    update: { valor: String(Boolean(activo)) },
+  });
+  return leerSecciones();
 };

@@ -15,11 +15,12 @@ export const finanzas   = (req, res, next) => svc.getFinanzas().then(d => ok(res
 export const moderacion = (req, res, next) => svc.getModeracion().then(d => ok(res, d)).catch(next);
 export const estado     = (req, res, next) => svc.getEstado().then(d => ok(res, d)).catch(next);
 
-export const patchSeccion = (req, res, next) => {
+export const patchSeccion = async (req, res, next) => {
   try {
     const { seccion, activo } = req.body;
     if (!seccion || activo === undefined) return res.status(400).json({ error: "Faltan campos: seccion, activo" });
-    res.json({ ok: true, seccionesEstado: svc.toggleSeccion(seccion, activo) });
+    const seccionesEstado = await svc.toggleSeccion(seccion, activo);
+    res.json({ ok: true, seccionesEstado });
   } catch (e) {
     e.message?.startsWith("Sección") ? res.status(400).json({ error: e.message }) : next(e);
   }

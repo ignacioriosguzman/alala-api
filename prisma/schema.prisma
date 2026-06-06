@@ -38,6 +38,12 @@ model User {
   @@index([activo])
 }
 
+model SiteConfig {
+  clave     String   @id
+  valor     String
+  updatedAt DateTime @updatedAt
+}
+
 model PagoCreador {
   id          Int       @id @default(autoincrement())
   creatorId   Int
@@ -160,7 +166,7 @@ model InstructorSaldo {
 
 model RefreshToken {
   id        Int       @id @default(autoincrement())
-  token     String
+  token     String    @unique
   userId    Int
   user      User      @relation(fields: [userId], references: [id])
   createdAt DateTime  @default(now())
@@ -231,7 +237,7 @@ model ContenidoDigital {
   creatorId          Int
   creator            User                @relation(fields: [creatorId], references: [id])
   status             String              @default("borrador") // borrador | activo | pausado
-  comisionPct        Float               @default(12.0)
+  comisionPct        Float               @default(12.0) // cursos=12%, microcontenidos/ebooks=20%
   ventas             Int                 @default(0)
   rating             Float               @default(0)
   reviews            Int                 @default(0)
@@ -312,27 +318,25 @@ model CompraInvitado {
 }
 
 model ProgresoLectura {
-  id                 Int               @id @default(autoincrement())
-  userId             Int?
-  emailInvitado      String?
-  contenidoId        Int
-  paginaActual       Int               @default(1)
-  porcentaje         Float             @default(0)
-  updatedAt          DateTime          @updatedAt
-  ContenidoDigital   ContenidoDigital? @relation(fields: [contenidoDigitalId], references: [id])
-  contenidoDigitalId Int?
+  id            Int              @id @default(autoincrement())
+  userId        Int?
+  emailInvitado String?
+  contenidoId   Int
+  paginaActual  Int              @default(1)
+  porcentaje    Float            @default(0)
+  updatedAt     DateTime         @updatedAt
+  contenido     ContenidoDigital @relation(fields: [contenidoId], references: [id], onDelete: Cascade)
 
   @@unique([userId, contenidoId])
   @@unique([emailInvitado, contenidoId])
 }
 
 model FavoriteContenido {
-  id                 Int               @id @default(autoincrement())
-  userId             Int
-  contenidoId        Int
-  createdAt          DateTime          @default(now())
-  ContenidoDigital   ContenidoDigital? @relation(fields: [contenidoDigitalId], references: [id])
-  contenidoDigitalId Int?
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  contenidoId Int
+  createdAt   DateTime         @default(now())
+  contenido   ContenidoDigital @relation(fields: [contenidoId], references: [id], onDelete: Cascade)
 
   @@unique([userId, contenidoId])
 }
@@ -351,6 +355,7 @@ model MicroContenido {
   autor         User     @relation(fields: [autorId], references: [id])
   precio        Int?     // null = gratuito
   comisionPct   Int      @default(20) // % comisión plataforma
+  ventas        Int      @default(0)
   publicado     Boolean  @default(true)
   portadaUrl    String?
   categoria     String   @default("General")
@@ -382,10 +387,13 @@ model CompraMicroContenido {
   pagoCreador        Int
   estado             String          @default("completada")
   downloadUrl        String?
+  flowToken          String?
+  flowOrder          String?
   createdAt          DateTime        @default(now())
 
   @@unique([userId, microContenidoId])
   @@unique([emailInvitado, microContenidoId])
+  @@index([flowToken])
 }
 
 model ResenaMicroContenido {
@@ -497,10 +505,13 @@ model CompraMiniEbook {
   pagoCreador        Int
   estado             String    @default("completada")
   downloadUrl        String?
+  flowToken          String?
+  flowOrder          String?
   createdAt          DateTime  @default(now())
 
   @@unique([userId, miniEbookId])
   @@unique([emailInvitado, miniEbookId])
+  @@index([flowToken])
 }
 
 model ResenaMiniEbook {

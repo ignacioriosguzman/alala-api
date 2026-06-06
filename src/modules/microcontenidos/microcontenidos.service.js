@@ -39,7 +39,7 @@ export const createMicro = (data, autorId) => {
 };
 
 export const listarMicros = async (query = {}) => {
-  const { tipo, categoria, busqueda, orden, gratuito, autorId } = query;
+  const { tipo, categoria, busqueda, orden, gratuito, autorId, page = 1, limit = 20 } = query;
 
   const where = { publicado: true };
 
@@ -58,18 +58,26 @@ export const listarMicros = async (query = {}) => {
   }
 
   let orderBy = { creadoEn: "desc" };
-  if (orden === "popularidad") orderBy = { creadoEn: "desc" };
+  if (orden === "popularidad") orderBy = { ventas: "desc" };
   else if (orden === "precio") orderBy = { precio: "asc" };
   else if (orden === "nuevo") orderBy = { creadoEn: "desc" };
 
-  return prisma.microContenido.findMany({
-    where,
-    orderBy,
-    include: {
-      autor: { select: { id: true, nombre: true } },
-      _count: { select: { resenas: true } },
-    },
-  });
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.min(50, Math.max(1, Number(limit)));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [items, total] = await Promise.all([
+    prisma.microContenido.findMany({
+      where, orderBy, skip, take: limitNum,
+      include: {
+        autor: { select: { id: true, nombre: true } },
+        _count: { select: { resenas: true } },
+      },
+    }),
+    prisma.microContenido.count({ where }),
+  ]);
+
+  return { items, total, page: pageNum, totalPages: Math.ceil(total / limitNum) };
 };
 
 export const listarPorTipo = (tipo) => {
@@ -244,36 +252,33 @@ export const comprarMicro = async (userId, microContenidoId) => {
   if (!micro) throw new Error("MicroContenido no encontrado");
   if (!micro.publicado) throw new Error("Contenido no disponible");
 
+  if ((micro.precio ?? 0) > 0) {
+    throw new Error("Este contenido requiere pago. Usa el endpoint /api/v1/pagos/micro/crear");
+  }
+
   const yaComprado = await prisma.compraMicroContenido.findUnique({
-    where: {
-      userId_microContenidoId: {
-        userId: Number(userId),
-        microContenidoId: Number(microContenidoId),
-      },
-    },
+    where: { userId_microContenidoId: { userId: Number(userId), microContenidoId: Number(microContenidoId) } },
   });
-
-  if (yaComprado) throw new Error("Ya has comprado este contenido");
-
-  const monto = micro.precio ?? 0;
-  const comisionPlataforma = Math.round(monto * ((micro.comisionPct ?? 20) / 100));
-  const pagoCreador = monto - comisionPlataforma;
+  if (yaComprado) throw new Error("Ya has accedido a este contenido");
 
   return prisma.$transaction(async (tx) => {
     const compra = await tx.compraMicroContenido.create({
       data: {
         microContenidoId: Number(microContenidoId),
         userId: Number(userId),
-        monto,
-        comisionPlataforma,
-        pagoCreador,
+        monto: 0,
+        comisionPlataforma: 0,
+        pagoCreador: 0,
         estado: "completada",
       },
       include: {
         microContenido: { select: { titulo: true, portadaUrl: true, contenido: true } },
       },
     });
-
+    await tx.microContenido.update({
+      where: { id: Number(microContenidoId) },
+      data: { ventas: { increment: 1 } },
+    });
     return compra;
   });
 };
@@ -286,38 +291,35 @@ export const comprarMicroInvitado = async (email, microContenidoId) => {
   if (!micro) throw new Error("MicroContenido no encontrado");
   if (!micro.publicado) throw new Error("Contenido no disponible");
 
+  if ((micro.precio ?? 0) > 0) {
+    throw new Error("Este contenido requiere pago. Usa el endpoint /api/v1/pagos/micro/crear");
+  }
+
   const emailClean = String(email).trim().toLowerCase();
 
   const yaComprado = await prisma.compraMicroContenido.findUnique({
-    where: {
-      emailInvitado_microContenidoId: {
-        emailInvitado: emailClean,
-        microContenidoId: Number(microContenidoId),
-      },
-    },
+    where: { emailInvitado_microContenidoId: { emailInvitado: emailClean, microContenidoId: Number(microContenidoId) } },
   });
-
-  if (yaComprado) throw new Error("Ya has comprado este contenido");
-
-  const monto = micro.precio ?? 0;
-  const comisionPlataforma = Math.round(monto * ((micro.comisionPct ?? 20) / 100));
-  const pagoCreador = monto - comisionPlataforma;
+  if (yaComprado) throw new Error("Ya has accedido a este contenido");
 
   return prisma.$transaction(async (tx) => {
     const compra = await tx.compraMicroContenido.create({
       data: {
         microContenidoId: Number(microContenidoId),
         emailInvitado: emailClean,
-        monto,
-        comisionPlataforma,
-        pagoCreador,
+        monto: 0,
+        comisionPlataforma: 0,
+        pagoCreador: 0,
         estado: "completada",
       },
       include: {
         microContenido: { select: { titulo: true, portadaUrl: true, contenido: true } },
       },
     });
-
+    await tx.microContenido.update({
+      where: { id: Number(microContenidoId) },
+      data: { ventas: { increment: 1 } },
+    });
     return compra;
   });
 };
@@ -364,12 +366,10 @@ export const confirmarCompraMicro = async (microContenidoId, userId) => {
       where: { id: compra.id },
       data: { estado: "completada" },
     });
-
     await tx.microContenido.update({
       where: { id: Number(microContenidoId) },
-      data: { /* no hay ventas counter en MicroContenido, se puede agregar luego */ },
+      data: { ventas: { increment: 1 } },
     });
-
     return updated;
   });
 };

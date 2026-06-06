@@ -2,7 +2,7 @@ import { getResumen, getMicrocursos, getManuales, getVentas } from "./creador.se
 
 export const resumen = async (req, res) => {
   try {
-    const data = await getResumen(req.params.id);
+    const data = await getResumen(req.user.id);
     res.json(data);
   } catch (err) {
     console.error("[Creador] resumen error:", err);
@@ -12,7 +12,7 @@ export const resumen = async (req, res) => {
 
 export const microcursos = async (req, res) => {
   try {
-    const data = await getMicrocursos(req.params.id);
+    const data = await getMicrocursos(req.user.id);
     res.json(data);
   } catch (err) {
     console.error("[Creador] microcursos error:", err);
@@ -22,7 +22,7 @@ export const microcursos = async (req, res) => {
 
 export const manuales = async (req, res) => {
   try {
-    const data = await getManuales(req.params.id);
+    const data = await getManuales(req.user.id);
     res.json(data);
   } catch (err) {
     console.error("[Creador] manuales error:", err);
@@ -32,7 +32,7 @@ export const manuales = async (req, res) => {
 
 export const ventas = async (req, res) => {
   try {
-    const data = await getVentas(req.params.id);
+    const data = await getVentas(req.user.id);
     res.json(data);
   } catch (err) {
     console.error("[Creador] ventas error:", err);

@@ -88,15 +88,17 @@ export const confirmarPago = async (req, res) => {
     const flowStatus = await obtenerEstadoPago(token);
     const estado = ESTADO_FLOW[flowStatus.status] ?? 'DESCONOCIDO';
 
-    // ── Determinar si es compra de curso o de contenido digital ──────────────
-    const compraContenido = await prisma.compraContenido.findFirst({ where: { flowToken: token } });
+    // ── Identificar tipo de compra por flowToken ──────────────────────────────
+    const [compraContenido, compraMicro, compraEbook] = await Promise.all([
+      prisma.compraContenido.findFirst({ where: { flowToken: token } }),
+      prisma.compraMicroContenido.findFirst({ where: { flowToken: token } }),
+      prisma.compraMiniEbook.findFirst({ where: { flowToken: token } }),
+    ]);
 
     if (compraContenido) {
       // Pago de ContenidoDigital
       if (compraContenido.estado === 'completada') return res.status(200).send('');
-      const flowStatus2 = await obtenerEstadoPago(token);
-      const estado2 = ESTADO_FLOW[flowStatus2.status] ?? 'DESCONOCIDO';
-      if (estado2 === 'PAGADO') {
+      if (estado === 'PAGADO') {
         const contenido = await prisma.contenidoDigital.findUnique({ where: { id: compraContenido.contenidoId } });
         await prisma.$transaction([
           prisma.compraContenido.update({
@@ -111,7 +113,54 @@ export const confirmarPago = async (req, res) => {
       } else {
         await prisma.compraContenido.update({
           where: { id: compraContenido.id },
-          data: { estado: estado2.toLowerCase() === 'rechazado' ? 'rechazada' : 'pendiente' },
+          data: { estado: estado === 'RECHAZADO' ? 'rechazada' : 'pendiente' },
+        });
+      }
+      return res.status(200).send('');
+    }
+
+    if (compraMicro) {
+      // Pago de MicroContenido
+      if (compraMicro.estado === 'completada') return res.status(200).send('');
+      if (estado === 'PAGADO') {
+        await prisma.$transaction([
+          prisma.compraMicroContenido.update({
+            where: { id: compraMicro.id },
+            data: { estado: 'completada' },
+          }),
+          prisma.microContenido.update({
+            where: { id: compraMicro.microContenidoId },
+            data: { ventas: { increment: 1 } },
+          }),
+        ]);
+      } else {
+        await prisma.compraMicroContenido.update({
+          where: { id: compraMicro.id },
+          data: { estado: estado === 'RECHAZADO' ? 'rechazada' : 'pendiente' },
+        });
+      }
+      return res.status(200).send('');
+    }
+
+    if (compraEbook) {
+      // Pago de MiniEbook
+      if (compraEbook.estado === 'completada') return res.status(200).send('');
+      if (estado === 'PAGADO') {
+        const ebook = await prisma.miniEbook.findUnique({ where: { id: compraEbook.miniEbookId } });
+        await prisma.$transaction([
+          prisma.compraMiniEbook.update({
+            where: { id: compraEbook.id },
+            data: { estado: 'completada', downloadUrl: ebook?.epubUrl || ebook?.pdfUrl || null },
+          }),
+          prisma.miniEbook.update({
+            where: { id: compraEbook.miniEbookId },
+            data: { ventas: { increment: 1 } },
+          }),
+        ]);
+      } else {
+        await prisma.compraMiniEbook.update({
+          where: { id: compraEbook.id },
+          data: { estado: estado === 'RECHAZADO' ? 'rechazada' : 'pendiente' },
         });
       }
       return res.status(200).send('');
@@ -165,22 +214,37 @@ export const retornoPago = async (req, res) => {
   try {
     if (!token) return res.redirect(`${baseUrl}/pago-fallido.html?error=sin_token`);
 
-    // Verificar si es compra de contenido digital
-    const compraContenido = await prisma.compraContenido.findFirst({ where: { flowToken: token } });
+    // Buscar en todos los tipos de compra
+    const [compraContenido, compraMicro, compraEbook, venta] = await Promise.all([
+      prisma.compraContenido.findFirst({ where: { flowToken: token } }),
+      prisma.compraMicroContenido.findFirst({ where: { flowToken: token } }),
+      prisma.compraMiniEbook.findFirst({ where: { flowToken: token } }),
+      prisma.venta.findUnique({ where: { flowToken: token } }),
+    ]);
+
     if (compraContenido) {
-      if (compraContenido.estado === 'completada') {
-        return res.redirect(`${baseUrl}/pago-exitoso.html?orden=${compraContenido.flowOrder}&contenido=${compraContenido.contenidoId}`);
-      }
-      return res.redirect(`${baseUrl}/pago-fallido.html?estado=${compraContenido.estado}&orden=${compraContenido.flowOrder}`);
+      return compraContenido.estado === 'completada'
+        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${compraContenido.flowOrder}&contenido=${compraContenido.contenidoId}`)
+        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${compraContenido.estado}&orden=${compraContenido.flowOrder}`);
     }
 
-    const venta = await prisma.venta.findUnique({ where: { flowToken: token } });
+    if (compraMicro) {
+      return compraMicro.estado === 'completada'
+        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${compraMicro.flowOrder}&micro=${compraMicro.microContenidoId}`)
+        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${compraMicro.estado}&orden=${compraMicro.flowOrder}`);
+    }
+
+    if (compraEbook) {
+      return compraEbook.estado === 'completada'
+        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${compraEbook.flowOrder}&ebook=${compraEbook.miniEbookId}`)
+        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${compraEbook.estado}&orden=${compraEbook.flowOrder}`);
+    }
+
     if (!venta) return res.redirect(`${baseUrl}/pago-fallido.html?error=no_encontrada`);
 
-    if (venta.estado === 'PAGADO') {
-      return res.redirect(`${baseUrl}/pago-exitoso.html?orden=${venta.flowOrder}&curso=${venta.courseId}`);
-    }
-    return res.redirect(`${baseUrl}/pago-fallido.html?estado=${venta.estado}&orden=${venta.flowOrder}`);
+    return venta.estado === 'PAGADO'
+      ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${venta.flowOrder}&curso=${venta.courseId}`)
+      : res.redirect(`${baseUrl}/pago-fallido.html?estado=${venta.estado}&orden=${venta.flowOrder}`);
   } catch (err) {
     console.error('[pagos] retornoPago:', err.message);
     res.redirect(`${baseUrl}/pago-fallido.html?error=servidor`);
@@ -260,6 +324,124 @@ export const crearOrdenContenido = async (req, res) => {
     res.json({ urlPago: `${flowData.url}?token=${flowData.token}`, token: flowData.token, commerceOrder });
   } catch (err) {
     console.error('[pagos] crearOrdenContenido:', err.message);
+    res.status(500).json({ error: 'Error al crear la orden de pago' });
+  }
+};
+
+// POST /api/v1/pagos/micro/crear — Flow para MicroContenido
+export const crearOrdenMicro = async (req, res) => {
+  try {
+    const { microId } = req.body;
+    const userId = req.user.id;
+
+    if (!microId) return res.status(400).json({ error: 'microId es requerido' });
+    const mid = Number(microId);
+    if (!Number.isInteger(mid) || mid <= 0) return res.status(400).json({ error: 'microId inválido' });
+
+    const micro = await prisma.microContenido.findUnique({ where: { id: mid } });
+    if (!micro) return res.status(404).json({ error: 'MicroContenido no encontrado' });
+    if (!micro.publicado) return res.status(400).json({ error: 'Contenido no disponible' });
+    if ((micro.precio ?? 0) === 0) return res.status(400).json({ error: 'Usa el endpoint de acceso gratuito' });
+
+    const yaComprado = await prisma.compraMicroContenido.findUnique({
+      where: { userId_microContenidoId: { userId, microContenidoId: mid } },
+    });
+    if (yaComprado && yaComprado.estado === 'completada') {
+      return res.status(409).json({ error: 'Ya tienes este contenido' });
+    }
+
+    const usuario = await prisma.user.findUnique({ where: { id: userId } });
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const monto = micro.precio;
+    const commerceOrder = `ALALA-MICRO-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
+
+    const flowData = await crearPago({
+      commerceOrder,
+      amount: monto,
+      email: usuario.email,
+      subject: `MicroContenido: ${micro.titulo}`,
+    });
+
+    const comisionPlataforma = Math.round(monto * ((micro.comisionPct ?? 20) / 100));
+    const pagoCreador = monto - comisionPlataforma;
+
+    if (yaComprado) {
+      await prisma.compraMicroContenido.update({
+        where: { id: yaComprado.id },
+        data: { flowToken: flowData.token, flowOrder: commerceOrder, estado: 'pendiente' },
+      });
+    } else {
+      await prisma.compraMicroContenido.create({
+        data: {
+          microContenidoId: mid, userId, monto, comisionPlataforma, pagoCreador,
+          estado: 'pendiente', flowToken: flowData.token, flowOrder: commerceOrder,
+        },
+      });
+    }
+
+    res.json({ urlPago: `${flowData.url}?token=${flowData.token}`, token: flowData.token, commerceOrder });
+  } catch (err) {
+    console.error('[pagos] crearOrdenMicro:', err.message);
+    res.status(500).json({ error: 'Error al crear la orden de pago' });
+  }
+};
+
+// POST /api/v1/pagos/ebook/crear — Flow para MiniEbook
+export const crearOrdenEbook = async (req, res) => {
+  try {
+    const { ebookId } = req.body;
+    const userId = req.user.id;
+
+    if (!ebookId) return res.status(400).json({ error: 'ebookId es requerido' });
+    const eid = Number(ebookId);
+    if (!Number.isInteger(eid) || eid <= 0) return res.status(400).json({ error: 'ebookId inválido' });
+
+    const ebook = await prisma.miniEbook.findUnique({ where: { id: eid } });
+    if (!ebook) return res.status(404).json({ error: 'Mini-ebook no encontrado' });
+    if (ebook.status !== 'activo') return res.status(400).json({ error: 'Ebook no disponible' });
+    if ((ebook.precio ?? 0) === 0) return res.status(400).json({ error: 'Usa el endpoint de acceso gratuito' });
+
+    const yaComprado = await prisma.compraMiniEbook.findUnique({
+      where: { userId_miniEbookId: { userId, miniEbookId: eid } },
+    });
+    if (yaComprado && yaComprado.estado === 'completada') {
+      return res.status(409).json({ error: 'Ya tienes este ebook' });
+    }
+
+    const usuario = await prisma.user.findUnique({ where: { id: userId } });
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const monto = ebook.precioOferta ?? ebook.precio;
+    const commerceOrder = `ALALA-EBOOK-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
+
+    const flowData = await crearPago({
+      commerceOrder,
+      amount: monto,
+      email: usuario.email,
+      subject: `Mini-ebook: ${ebook.titulo}`,
+    });
+
+    const comisionPlataforma = Math.round(monto * ((ebook.comisionPct ?? 20) / 100));
+    const pagoCreador = monto - comisionPlataforma;
+
+    if (yaComprado) {
+      await prisma.compraMiniEbook.update({
+        where: { id: yaComprado.id },
+        data: { flowToken: flowData.token, flowOrder: commerceOrder, estado: 'pendiente' },
+      });
+    } else {
+      await prisma.compraMiniEbook.create({
+        data: {
+          miniEbookId: eid, userId, monto, comisionPlataforma, pagoCreador,
+          estado: 'pendiente', flowToken: flowData.token, flowOrder: commerceOrder,
+        },
+      });
+    }
+
+    res.json({ urlPago: `${flowData.url}?token=${flowData.token}`, token: flowData.token, commerceOrder });
+  } catch (err) {
+    console.error('[pagos] crearOrdenEbook:', err.message);
     res.status(500).json({ error: 'Error al crear la orden de pago' });
   }
 };

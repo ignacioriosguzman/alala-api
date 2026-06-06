@@ -21,10 +21,13 @@ export const getLink = (creatorId) => ({
   creatorId,
 });
 
-export const registrarVisita = (creatorId, ip, userAgent) =>
-  prisma.refLinkVisit.create({
-    data: { creatorId: Number(creatorId), ip, userAgent },
-  });
+export const registrarVisita = async (creatorId, ip, userAgent) => {
+  const cId = Number(creatorId);
+  if (!Number.isInteger(cId) || cId <= 0) throw new Error("creatorId inválido");
+  const existe = await prisma.user.findUnique({ where: { id: cId }, select: { id: true } });
+  if (!existe) throw new Error("Creador no encontrado");
+  return prisma.refLinkVisit.create({ data: { creatorId: cId, ip, userAgent } });
+};
 
 // ── Stats (visitas + conversiones) ────────────────────────────────────────────
 

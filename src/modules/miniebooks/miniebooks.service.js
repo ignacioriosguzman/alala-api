@@ -307,29 +307,23 @@ export const comprarEbook = async (userId, miniEbookId) => {
   if (!ebook) throw new Error("Mini-ebook no encontrado");
   if (ebook.status !== "activo") throw new Error("Ebook no disponible");
 
+  if ((ebook.precio ?? 0) > 0) {
+    throw new Error("Este ebook requiere pago. Usa el endpoint /api/v1/pagos/ebook/crear");
+  }
+
   const yaComprado = await prisma.compraMiniEbook.findUnique({
-    where: {
-      userId_miniEbookId: {
-        userId: Number(userId),
-        miniEbookId: Number(miniEbookId),
-      },
-    },
+    where: { userId_miniEbookId: { userId: Number(userId), miniEbookId: Number(miniEbookId) } },
   });
-
-  if (yaComprado) throw new Error("Ya has comprado este ebook");
-
-  const monto = ebook.precio ?? 0;
-  const comisionPlataforma = Math.round(monto * ((ebook.comisionPct ?? 20) / 100));
-  const pagoCreador = monto - comisionPlataforma;
+  if (yaComprado) throw new Error("Ya has accedido a este ebook");
 
   return prisma.$transaction(async (tx) => {
     const compra = await tx.compraMiniEbook.create({
       data: {
         miniEbookId: Number(miniEbookId),
         userId: Number(userId),
-        monto,
-        comisionPlataforma,
-        pagoCreador,
+        monto: 0,
+        comisionPlataforma: 0,
+        pagoCreador: 0,
         estado: "completada",
         downloadUrl: ebook.epubUrl || ebook.pdfUrl,
       },
@@ -337,12 +331,10 @@ export const comprarEbook = async (userId, miniEbookId) => {
         miniEbook: { select: { titulo: true, portadaUrl: true } },
       },
     });
-
     await tx.miniEbook.update({
       where: { id: Number(miniEbookId) },
       data: { ventas: { increment: 1 } },
     });
-
     return compra;
   });
 };
@@ -355,31 +347,25 @@ export const comprarEbookInvitado = async (email, miniEbookId) => {
   if (!ebook) throw new Error("Mini-ebook no encontrado");
   if (ebook.status !== "activo") throw new Error("Ebook no disponible");
 
+  if ((ebook.precio ?? 0) > 0) {
+    throw new Error("Este ebook requiere pago. Usa el endpoint /api/v1/pagos/ebook/crear");
+  }
+
   const emailClean = String(email).trim().toLowerCase();
 
   const yaComprado = await prisma.compraMiniEbook.findUnique({
-    where: {
-      emailInvitado_miniEbookId: {
-        emailInvitado: emailClean,
-        miniEbookId: Number(miniEbookId),
-      },
-    },
+    where: { emailInvitado_miniEbookId: { emailInvitado: emailClean, miniEbookId: Number(miniEbookId) } },
   });
-
-  if (yaComprado) throw new Error("Ya has comprado este ebook");
-
-  const monto = ebook.precio ?? 0;
-  const comisionPlataforma = Math.round(monto * ((ebook.comisionPct ?? 20) / 100));
-  const pagoCreador = monto - comisionPlataforma;
+  if (yaComprado) throw new Error("Ya has accedido a este ebook");
 
   return prisma.$transaction(async (tx) => {
     const compra = await tx.compraMiniEbook.create({
       data: {
         miniEbookId: Number(miniEbookId),
         emailInvitado: emailClean,
-        monto,
-        comisionPlataforma,
-        pagoCreador,
+        monto: 0,
+        comisionPlataforma: 0,
+        pagoCreador: 0,
         estado: "completada",
         downloadUrl: ebook.epubUrl || ebook.pdfUrl,
       },
@@ -387,12 +373,10 @@ export const comprarEbookInvitado = async (email, miniEbookId) => {
         miniEbook: { select: { titulo: true, portadaUrl: true } },
       },
     });
-
     await tx.miniEbook.update({
       where: { id: Number(miniEbookId) },
       data: { ventas: { increment: 1 } },
     });
-
     return compra;
   });
 };
