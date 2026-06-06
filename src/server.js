@@ -43,6 +43,10 @@ import miniebooksRoutes from "./modules/miniebooks/miniebooks.routes.js";
 import creadorRoutes from "./modules/creador/creador.routes.js";
 import creatorRoutes from "./modules/creator/creator.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
+import newsletterRoutes from "./modules/newsletter/newsletter.routes.js";
+import followsRoutes from "./modules/follows/follows.routes.js";
+import articleFavoritesRoutes from "./modules/article-favorites/article-favorites.routes.js";
+import articleCommentsRoutes from "./modules/article-comments/article-comments.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { verificarConexionSMTP } from "./services/email.service.js";
 import { limpiarTokensExpirados } from "./modules/auth/auth.service.js";
@@ -152,6 +156,10 @@ v1.use("/miniebooks", miniebooksRoutes);
 v1.use("/creador", creadorRoutes);
 v1.use("/creator", creatorRoutes);
 v1.use("/admin",   adminRoutes);
+v1.use("/newsletter", newsletterRoutes);
+v1.use("/follows", followsRoutes);
+v1.use("/article-favorites", articleFavoritesRoutes);
+v1.use("/article-comments", articleCommentsRoutes);
 app.use("/api/v1", v1);
 
 // Sitemap sigue accesible en raíz para bots

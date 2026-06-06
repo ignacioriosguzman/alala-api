@@ -147,7 +147,8 @@ export const checkFavorito = async (req, res) => {
 // ── Progreso ──
 export const guardarProgreso = async (req, res) => {
   try {
-    const { userId, emailInvitado, porcentaje, leidoCompleto } = req.body;
+    const { emailInvitado, porcentaje, leidoCompleto } = req.body;
+    const userId = req.user?.id ?? null;
     const prog = await guardarProgresoMicro(req.params.id, { userId, emailInvitado, porcentaje, leidoCompleto });
     res.json(prog);
   } catch (error) {

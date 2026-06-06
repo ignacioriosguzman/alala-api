@@ -1,5 +1,5 @@
 import express from "express";
-import { authGuard } from "../../middlewares/authGuard.js";
+import { authGuard, optionalAuth } from "../../middlewares/authGuard.js";
 import { roleGuard } from "../../middlewares/roleGuard.js";
 import {
   crear,
@@ -36,7 +36,7 @@ router.get("/:id/resenas", listarResenasCtrl);
 router.get("/:id/compra/check", checkCompra);
 
 // Requieren auth (creador)
-router.post("/", authGuard, roleGuard("INSTRUCTOR", "ADMIN"), crear);
+router.post("/", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), crear);
 router.get("/mis-ebooks", authGuard, misEbooks);
 router.patch("/:id", authGuard, editar);
 router.patch("/:id/status", authGuard, cambiarEstado);
@@ -49,7 +49,7 @@ router.get("/favoritos/mis-favoritos", authGuard, misFavoritos);
 router.get("/:id/favorito/check", authGuard, checkFav);
 
 // Progreso
-router.post("/:id/progreso", saveProgreso);
+router.post("/:id/progreso", optionalAuth, saveProgreso);
 
 // Compras
 router.post("/:id/comprar", authGuard, comprar);

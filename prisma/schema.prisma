@@ -32,6 +32,11 @@ model User {
   miniEbooks        MiniEbook[]
   creatorProfile    CreatorProfile?
   pagosRecibidos    PagoCreador[]
+  siguiendo         UserFollow[]       @relation("Seguidor")
+  seguidores        UserFollow[]       @relation("Seguido")
+  comentarios       ArticleComment[]
+  articulosFav      ArticleFavorite[]
+  listas            UserList[]
 
   @@index([email])
   @@index([role])
@@ -546,4 +551,84 @@ model ProgresoMiniEbook {
 
   @@unique([userId, miniEbookId])
   @@unique([emailInvitado, miniEbookId])
+}
+
+// ═══════════════════════════════════════════════════════════
+// MÓDULO REVISTA EDITORIAL
+// ═══════════════════════════════════════════════════════════
+
+model Newsletter {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([activo])
+}
+
+model UserFollow {
+  id         Int      @id @default(autoincrement())
+  seguidorId Int
+  seguidor   User     @relation("Seguidor", fields: [seguidorId], references: [id], onDelete: Cascade)
+  seguidoId  Int
+  seguido    User     @relation("Seguido", fields: [seguidoId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([seguidorId, seguidoId])
+  @@index([seguidorId])
+  @@index([seguidoId])
+}
+
+model ArticleComment {
+  id          Int      @id @default(autoincrement())
+  articuloId  String   // ID del artículo en JSON (slug)
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contenido   String
+  aprobado    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([articuloId])
+  @@index([userId])
+  @@index([aprobado])
+}
+
+model ArticleFavorite {
+  id         Int      @id @default(autoincrement())
+  articuloId String   // ID del artículo en JSON (slug)
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, articuloId])
+  @@index([userId])
+  @@index([articuloId])
+}
+
+model UserList {
+  id          Int            @id @default(autoincrement())
+  userId      Int
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nombre      String
+  descripcion String?
+  publica     Boolean        @default(false)
+  items       UserListItem[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+model UserListItem {
+  id         Int      @id @default(autoincrement())
+  listaId    Int
+  lista      UserList @relation(fields: [listaId], references: [id], onDelete: Cascade)
+  tipo       String   // "articulo" | "curso" | "contenido"
+  referenciaId String // ID del recurso
+  createdAt  DateTime @default(now())
+
+  @@unique([listaId, tipo, referenciaId])
+  @@index([listaId])
 }

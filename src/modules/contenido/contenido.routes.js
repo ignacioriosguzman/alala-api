@@ -14,7 +14,7 @@ import {
 
 const router = express.Router();
 
-router.post("/", authGuard, roleGuard("INSTRUCTOR", "ADMIN"), crear);
+router.post("/", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), crear);
 router.get("/catalogo", catalogo);
 router.get("/mis-contenidos", authGuard, misContenidos);
 router.get("/:id", obtener);

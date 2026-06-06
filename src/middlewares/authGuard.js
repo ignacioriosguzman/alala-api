@@ -1,6 +1,20 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 
+export const optionalAuth = async (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return next();
+  try {
+    const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: { id: true, nombre: true, email: true, role: true, verificado: true, activo: true },
+    });
+    if (user?.activo) req.user = user;
+  } catch { /* token inválido, continúa como invitado */ }
+  next();
+};
+
 export const authGuard = async (req, res, next) => {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {

@@ -1,5 +1,5 @@
 import express from "express";
-import { authGuard } from "../../middlewares/authGuard.js";
+import { authGuard, optionalAuth } from "../../middlewares/authGuard.js";
 import { roleGuard } from "../../middlewares/roleGuard.js";
 import {
   crear,
@@ -39,14 +39,14 @@ router.get("/:id/favorito/check", authGuard, checkFavorito);
 router.get("/:id/compra/check", checkCompra);
 
 // Requieren auth
-router.post("/", authGuard, roleGuard("INSTRUCTOR", "ADMIN"), crear);
+router.post("/", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), crear);
 router.patch("/:id", authGuard, editar);
 router.patch("/:id/publicado", authGuard, cambiarPublicado);
 router.delete("/:id", authGuard, eliminar);
 
 // Favoritos y progreso
 router.post("/:id/favorito", authGuard, toggleFavorito);
-router.post("/:id/progreso", guardarProgreso);
+router.post("/:id/progreso", optionalAuth, guardarProgreso);
 
 // Compras
 router.post("/:id/comprar", authGuard, comprar);
