@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { authGuard, optionalAuth } from "../../middlewares/authGuard.js";
 import { roleGuard } from "../../middlewares/roleGuard.js";
 import {
@@ -27,6 +28,14 @@ import {
 
 const router = express.Router();
 
+const invitadoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas solicitudes. Intenta más tarde." },
+});
+
 // Públicos
 router.get("/", listar);
 router.get("/:id", obtener);
@@ -53,7 +62,7 @@ router.post("/:id/progreso", optionalAuth, saveProgreso);
 
 // Compras
 router.post("/:id/comprar", authGuard, comprar);
-router.post("/:id/comprar-invitado", comprarInvitado);
+router.post("/:id/comprar-invitado", invitadoLimiter, comprarInvitado);
 router.get("/mis-compras", authGuard, getMisCompras);
 
 // Estadísticas

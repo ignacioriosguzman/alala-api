@@ -35,7 +35,7 @@ function validarMagicBytes(buffer, tipo) {
   return false;
 }
 
-const MAX_PDF_BYTES  = 50 * 1024 * 1024;  // 50 MB
+const MAX_PDF_BYTES  = 10 * 1024 * 1024;  // 10 MB (limitado por express.json limit)
 const MAX_IMG_BYTES  = 10 * 1024 * 1024;  // 10 MB
 
 const handleError = (error, res) => {

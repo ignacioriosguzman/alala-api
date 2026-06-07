@@ -50,7 +50,7 @@ export const getResumen = async (creatorId) => {
       take: 5,
       include: {
         contenido: { select: { titulo: true, tipo: true } },
-        user:      { select: { nombre: true, email: true } },
+        user:      { select: { nombre: true } },
       },
     }),
 
@@ -89,7 +89,7 @@ export const getResumen = async (creatorId) => {
     ultimasVentas: ultimasC.map((v) => ({
       contenido: v.contenido?.titulo ?? "—",
       tipo:      v.contenido?.tipo ?? "contenido",
-      comprador: v.user?.nombre ?? v.user?.email ?? "—",
+      comprador: v.user?.nombre ?? "—",
       monto:     v.monto,
       fecha:     v.createdAt,
     })),

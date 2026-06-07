@@ -23,6 +23,14 @@ export const crearPerfil = async (req, res) => {
   try {
     const { nombrePublico, bio, avatar, especialidad, sitioWeb, instagram, twitter } = req.body;
     if (!nombrePublico?.trim()) return res.status(400).json({ error: "nombrePublico es obligatorio" });
+    // Validar longitudes máximas para prevenir abuso
+    if (nombrePublico.length > 120) return res.status(400).json({ error: "nombrePublico máximo 120 caracteres" });
+    if (bio?.length > 2000) return res.status(400).json({ error: "bio máximo 2000 caracteres" });
+    if (avatar?.length > 500) return res.status(400).json({ error: "avatar URL máximo 500 caracteres" });
+    if (especialidad?.length > 100) return res.status(400).json({ error: "especialidad máximo 100 caracteres" });
+    if (sitioWeb?.length > 500) return res.status(400).json({ error: "sitioWeb máximo 500 caracteres" });
+    if (instagram?.length > 100) return res.status(400).json({ error: "instagram máximo 100 caracteres" });
+    if (twitter?.length > 100) return res.status(400).json({ error: "twitter máximo 100 caracteres" });
     const data = await upsertProfile(req.user.id, { nombrePublico, bio, avatar, especialidad, sitioWeb, instagram, twitter });
     ok(res, data);
   } catch (e) { fail(res, e); }

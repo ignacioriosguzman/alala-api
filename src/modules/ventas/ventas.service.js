@@ -9,7 +9,7 @@ export const getVentasInstructor = async (instructorUserId) => {
     orderBy: { createdAt: 'desc' },
     include: {
       course: { select: { titulo: true, precio: true } },
-      user: { select: { nombre: true, email: true } },
+      user: { select: { nombre: true } },
     },
   });
 
@@ -39,8 +39,8 @@ export const getVentasAdmin = async () => {
     orderBy: { createdAt: 'desc' },
     include: {
       course: { select: { titulo: true, precio: true } },
-      user: { select: { nombre: true, email: true } },
-      instructorUser: { select: { nombre: true, email: true } },
+      user: { select: { nombre: true } },
+      instructorUser: { select: { nombre: true } },
     },
   });
 

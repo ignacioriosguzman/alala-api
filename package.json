@@ -9,7 +9,9 @@
     "build": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push",
+    "seed": "node scripts/seed-microcontenidos.js",
+    "seed:check": "node -e \"import('./scripts/seed-microcontenidos.js').catch(e => { console.error(e); process.exit(1); })\""
   },
   "dependencies": {
     "@prisma/client": "^5.13.0",

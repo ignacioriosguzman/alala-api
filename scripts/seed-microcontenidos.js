@@ -239,6 +239,96 @@ const EJEMPLOS = [
   },
 
   // ═══════════════════════════════════════════════════════════
+  // MICROTEXTOS EDITORIALES ALALA (6) — contenido oficial de la plataforma
+  // Estos son los textos que aparecen como fallback en el frontend.
+  // Al seedearlos, quedan en la BD con tracking real de vistas y reseñas.
+  // ═══════════════════════════════════════════════════════════
+  {
+    titulo: "La hora de la acuarela",
+    descripcion: "Un texto íntimo sobre dejarse llevar por el pigmento y el silencio del papel mojado.",
+    contenido: `# El primer encuentro\n\nHabía algo en el silencio de esa mañana que invitaba a probar. La caja de acuarelas llegó sin ceremonias: un regalo olvidado, apilado entre libros y papeles viejos. No recordaba quién la había dejado ahí, pero los colores, vivos todavía, parecían esperar desde hacía años.\n\nLlené un vaso de agua. Abrí el papel grueso que guardaba para bocetos que nunca hacía. Y sin saber muy bien por qué, mojé el pincel en azul cobalto.\n\n## Dejar que el agua decida\n\nNadie me había dicho que la acuarela se parece más a una conversación que a un monólogo. Que el papel absorbe, rechaza, crea bordes inesperados. Que el error no existe: solo existe lo que el agua quiere hacer.\n\nDibujé una forma indefinida. Luego otra. El pigmento se extendió por su cuenta, creando una montaña donde yo quería un cielo. En lugar de corregir, observé. La montaña me pareció más honesta que lo que había planeado.\n\n## La hora exacta\n\nDicen que para pintar bien hace falta técnica. Pero esa mañana descubrí que hace falta algo más urgente: permitírselo. Dar una hora —solo una— donde nadie pida nada, donde el teléfono esté en otra habitación, donde lo único que importe sea el trazo siguiente.\n\nLa acuarela no pide perfección. Pide presencia. Y cuando el pincel toca el papel por tercera vez, ya no estás pintando. Estás respirando con las manos.`,
+    tipo: "microtexto",
+    precio: null,
+    publicado: true,
+    portadaUrl: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&q=80",
+    categoria: "Pintura",
+    palabrasClave: ["acuarela", "pintura", "presencia", "arte"],
+    paginas: 2,
+    lecturaMin: 3,
+    autorId: 1,
+  },
+  {
+    titulo: "El primer acorde",
+    descripcion: "Una historia mínima sobre el miedo y la emoción de tocar algo propio por primera vez.",
+    contenido: `# El sonido del miedo\n\nMi dedo índice tardó treinta segundos en apretar la cuerda. Otros quince en encontrar el traste correcto. Y cuando finalmente sonó —un fa mayor, desafinado, demasiado fuerte— el silencio que siguió fue más profundo que la nota misma.\n\n## Lo que no enseñan\n\nNadie cuenta que antes del primer acorde hay una puerta invisible. Que del otro lado no hay técnica ni teoría: solo la sospecha de que tal vez, quizás, puedas hacer algo que suene a ti.\n\nLa guitarra me miraba desde el rincón desde hacía meses. La había comprado en un arranque, convencida de que la música estaba en mis manos esperando permiso. Pero el permiso no llega solo. Hay que pedirlo en voz alta, aunque la voz tiemble.\n\n## El acorde que cambia todo\n\nCuando logré que las seis cuerdas sonaran al mismo tiempo —aunque fuera por un segundo, aunque la cejilla doliera, aunque la afinación fuera dudosa— sentí algo extraño. No era felicidad. Era reconocimiento. Como si una parte mía que no sabía que existía hubiera respondido "ahí estás".`,
+    tipo: "microtexto",
+    precio: null,
+    publicado: true,
+    portadaUrl: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80",
+    categoria: "Música",
+    palabrasClave: ["guitarra", "música", "aprendizaje", "miedo"],
+    paginas: 1,
+    lecturaMin: 2,
+    autorId: 1,
+  },
+  {
+    titulo: "Barro bajo las uñas",
+    descripcion: "Reflexión sobre la cerámica como práctica de atención plena y contacto con lo esencial.",
+    contenido: `# Las manos en la tierra\n\nLa primera vez que hundí las manos en la arcilla no pensé en vasijas ni en técnicas. Pensé en frío. En la humedad que sube por las muñecas. En lo extrañamente reconfortante que es sentir algo que no tiene prisa por ser otra cosa.\n\n## El oficio del presente\n\nEl torno gira, sí. Pero el verdadero movimiento ocurre cuando dejas de forcejar. Cuando las manos —sucias, cansadas, imprecisas— dejan de obedecer la mente y empiezan a escuchar el barro. La arcilla tiene memoria. Si la aprietas con miedo, se agrieta. Si la tocas con prisa, se deforma. Solo cuando respiras al mismo ritmo que ella, algo comienza a tomar forma.\n\n## Lo que queda\n\nHoras después, cuando lavo las manos y el agua del lavabo se vuelve gris, sigo sintiendo el tacto. No es nostalgia: es constancia. La cerámica enseña que las cosas sólidas nacen del contacto prolongado. Que la belleza no se impone. Que bajo las uñas, como bajo la paciencia, siempre queda un poco de tierra que no se va.`,
+    tipo: "microtexto",
+    precio: null,
+    publicado: true,
+    portadaUrl: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=800&q=80",
+    categoria: "Cerámica",
+    palabrasClave: ["cerámica", "arcilla", "atención plena", "artesanía"],
+    paginas: 2,
+    lecturaMin: 4,
+    autorId: 1,
+  },
+  {
+    titulo: "La danza que nadie ve",
+    descripcion: "Una mirada íntima al movimiento cotidiano como forma de expresión que nadie ha coreografiado.",
+    contenido: `# La coreografía invisible\n\nHay una danza que ocurre cada mañana mientras espera que hierva el agua. Otra, más lenta, cuando recoges la ropa de la cama con gestos que solo tú reconoces. Nadie las filma. No tienen nombre. Pero están ahí, entre el cuerpo y el día, como una conversación que no necesita traducción.\n\n## El cuerpo que decide\n\nNo hace falta un escenario. El cuerpo ya sabe. Sabe cómo girar para alcanzar el estante más alto. Cómo inclinarse hacia adelante cuando la tristeza pesa. Cómo estirarse en la madrugada como si cada miembro despertara a su propio ritmo.\n\n## La danza verdadera\n\nLa bailarina profesional busca la perfección del gesto. Pero la danza que nadie ve busca otra cosa: alivio, expresión, compañía propia. Es la que haces mientras escuchas música con auriculares en la cocina. La que inventas caminando bajo la lluvia. La que ocurre cuando nadie mira y, precisamente por eso, es la más tuya.`,
+    tipo: "microtexto",
+    precio: null,
+    publicado: true,
+    portadaUrl: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&q=80",
+    categoria: "Danza",
+    palabrasClave: ["danza", "movimiento", "cuerpo", "cotidiano"],
+    paginas: 2,
+    lecturaMin: 3,
+    autorId: 1,
+  },
+  {
+    titulo: "Tejer es recordar",
+    descripcion: "Un microtexto sobre la memoria cosida en el tejido y el tiempo que se transforma en textura.",
+    contenido: `# El hilo que conecta\n\nMi abuela no decía "tejo". Decía "passo el tempo", como si el tiempo fuera algo que se pudiera atravesar con aguja y lana. Y tal vez tenía razón. Cada punto que daba era un minuto que no se perdía: se convertía en textura, en calor, en algo que alguien más usaría después.\n\n## La memoria en los nudos\n\nTejer no es solo crear tela. Es dejar que el cuerpo repita un gesto hasta que la mente se suelte. Es contar sin números, porque cada vuelta es una unidad de atención. Es sostener algo que aún no existe pero que ya se siente necesario.\n\n## Tejer hoy\n\nAhora entiendo por qué los tejedores parecen estar en otra parte. No están ausentes: están en el tiempo correcto. El que no corre. El que se mide en vueltas, no en notificaciones. Cuando tomo las agujas y empiezo, no estoy haciendo una bufanda. Estoy recordando que existo, punto por punto, sin prisa.`,
+    tipo: "microtexto",
+    precio: null,
+    publicado: true,
+    portadaUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800&q=80",
+    categoria: "Artesanía",
+    palabrasClave: ["tejido", "memoria", "tiempo", "artesanía"],
+    paginas: 2,
+    lecturaMin: 3,
+    autorId: 1,
+  },
+  {
+    titulo: "Organiza tu espacio de creación",
+    descripcion: "Paso a paso para armar un rincón de trabajo en casa que sea funcional, bonito y tuyo.",
+    contenido: `# Tu rincón existe ya\n\nNo necesitas un taller completo. Necesitas un metro cuadrado que te reconozca. Un lugar donde dejar un proyecto a medio hacer sin que nadie lo mueva. Un espacio que diga, sin palabras: "aquí se permite crear".\n\n## Paso uno: observar antes de mover\n\nAntes de comprar cajas o reorganizar, pasa un día mirando. ¿Dónde cae la luz natural? ¿Qué esquina está siempre vacía? ¿Dónde te detienes sin razón? Ese punto, aunque parezca imposible, es el candidato ideal. La luz importa más que los metros.\n\n## Paso dos: tres zonas claras\n\nDivide tu espacio en tres funciones, aunque se toquen. Una zona de trabajo: la mesa, el caballete, la máquina. Una zona de materiales: estante, cajón, cesto. Una zona de pausa: una silla, una tetera, una vista. La creación no es solo producción. También es descanso.\n\n## Paso tres: la vertical es tu aliada\n\nCuando falta superficie, sube. Estantes flotantes, tableros de corcho en la pared, ganchos para herramientas. Lo que cuelga no ocupa mesa. Y lo que se ve, se usa.\n\n## Paso cuatro: dejar huella\n\nPon algo que no sea útil pero sea tuyo. Una foto, una piedra, una frase escrita a mano. El espacio de creación no es una oficina: es un refugio. Y los refugios se reconocen porque huelen a persona.`,
+    tipo: "instructivo",
+    precio: null,
+    publicado: true,
+    portadaUrl: "https://images.unsplash.com/photo-1504893524553-b855bce32c67?w=800&q=80",
+    categoria: "Talleres",
+    palabrasClave: ["espacio", "creatividad", "organización", "hogar"],
+    paginas: 4,
+    lecturaMin: 5,
+    autorId: 1,
+  },
+
+  // ═══════════════════════════════════════════════════════════
   // MINI-CURSOS ESCRITOS (4)
   // ═══════════════════════════════════════════════════════════
   {
@@ -302,15 +392,23 @@ const EJEMPLOS = [
 async function main() {
   console.log("🌱 Seed de MicroContenidos iniciado...");
 
-  // Verificar si existe un usuario con id 1, si no, advertir
   const user = await prisma.user.findUnique({ where: { id: 1 } });
   if (!user) {
-    console.warn("⚠️ No existe usuario con id=1. Los microcontenidos quedarán sin autor válido.");
-    console.warn("   Crea un usuario primero o ajusta autorId en este script.");
+    console.warn("⚠️ No existe usuario con id=1. Ajusta autorId en este script o crea un usuario primero.");
   }
 
+  // Titulos ya existentes para evitar duplicados
+  const existentes = await prisma.microContenido.findMany({ select: { titulo: true } });
+  const titulosExistentes = new Set(existentes.map(e => e.titulo));
+
   let creados = 0;
+  let saltados = 0;
   for (const data of EJEMPLOS) {
+    if (titulosExistentes.has(data.titulo)) {
+      console.log(`  ⏭  Ya existe: "${data.titulo}"`);
+      saltados++;
+      continue;
+    }
     try {
       await prisma.microContenido.create({ data });
       creados++;
@@ -320,7 +418,7 @@ async function main() {
     }
   }
 
-  console.log(`\n🎉 ${creados} microcontenidos creados exitosamente.`);
+  console.log(`\n✅ ${creados} creados, ${saltados} omitidos (ya existían).`);
 }
 
 main()

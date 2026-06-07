@@ -18,9 +18,41 @@ export const enviar = async (req, res) => {
     if (!cursoId || !destinatarioId || !texto) {
       return res.status(400).json({ error: "cursoId, destinatarioId y texto son requeridos" });
     }
+    const cId = Number(cursoId);
+    const dId = Number(destinatarioId);
+
+    // Verificar que el remitente tiene acceso al curso (instructor o matriculado)
+    const curso = await prisma.course.findUnique({
+      where: { id: cId },
+      select: { instructorUserId: true },
+    });
+    if (!curso) return res.status(404).json({ error: "Curso no encontrado" });
+
+    const isInstructor = curso.instructorUserId === req.user.id;
+    const isEnrolled = await prisma.enrollment.findFirst({
+      where: { userId: req.user.id, courseId: cId },
+    });
+    if (!isInstructor && !isEnrolled) {
+      return res.status(403).json({ error: "No tienes acceso a este curso" });
+    }
+
+    // El destinatario debe ser el instructor (si es alumno) o un alumno matriculado (si es instructor)
+    const destIsInstructor = curso.instructorUserId === dId;
+    const destIsEnrolled = await prisma.enrollment.findFirst({
+      where: { userId: dId, courseId: cId },
+    });
+    if (!destIsInstructor && !destIsEnrolled) {
+      return res.status(403).json({ error: "Destinatario no pertenece a este curso" });
+    }
+
+    // Evitar auto-mensajes
+    if (req.user.id === dId) {
+      return res.status(400).json({ error: "No puedes enviarte mensajes a ti mismo" });
+    }
+
     const mensaje = await createMensaje({
-      cursoId,
-      destinatarioId,
+      cursoId: cId,
+      destinatarioId: dId,
       texto,
       remitenteId: req.user.id,
     });

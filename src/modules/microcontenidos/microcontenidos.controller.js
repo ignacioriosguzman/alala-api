@@ -176,10 +176,12 @@ export const comprar = async (req, res) => {
   }
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const comprarInvitado = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: "Email requerido" });
+    if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: "Email inválido" });
     const compra = await comprarMicroInvitado(email, req.params.id);
     res.json(compra);
   } catch (error) {

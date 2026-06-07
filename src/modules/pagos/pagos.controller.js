@@ -224,27 +224,27 @@ export const retornoPago = async (req, res) => {
 
     if (compraContenido) {
       return compraContenido.estado === 'completada'
-        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${compraContenido.flowOrder}&contenido=${compraContenido.contenidoId}`)
-        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${compraContenido.estado}&orden=${compraContenido.flowOrder}`);
+        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${encodeURIComponent(compraContenido.flowOrder)}&contenido=${encodeURIComponent(compraContenido.contenidoId)}`)
+        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${encodeURIComponent(compraContenido.estado)}&orden=${encodeURIComponent(compraContenido.flowOrder)}`);
     }
 
     if (compraMicro) {
       return compraMicro.estado === 'completada'
-        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${compraMicro.flowOrder}&micro=${compraMicro.microContenidoId}`)
-        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${compraMicro.estado}&orden=${compraMicro.flowOrder}`);
+        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${encodeURIComponent(compraMicro.flowOrder)}&micro=${encodeURIComponent(compraMicro.microContenidoId)}`)
+        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${encodeURIComponent(compraMicro.estado)}&orden=${encodeURIComponent(compraMicro.flowOrder)}`);
     }
 
     if (compraEbook) {
       return compraEbook.estado === 'completada'
-        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${compraEbook.flowOrder}&ebook=${compraEbook.miniEbookId}`)
-        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${compraEbook.estado}&orden=${compraEbook.flowOrder}`);
+        ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${encodeURIComponent(compraEbook.flowOrder)}&ebook=${encodeURIComponent(compraEbook.miniEbookId)}`)
+        : res.redirect(`${baseUrl}/pago-fallido.html?estado=${encodeURIComponent(compraEbook.estado)}&orden=${encodeURIComponent(compraEbook.flowOrder)}`);
     }
 
     if (!venta) return res.redirect(`${baseUrl}/pago-fallido.html?error=no_encontrada`);
 
     return venta.estado === 'PAGADO'
-      ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${venta.flowOrder}&curso=${venta.courseId}`)
-      : res.redirect(`${baseUrl}/pago-fallido.html?estado=${venta.estado}&orden=${venta.flowOrder}`);
+      ? res.redirect(`${baseUrl}/pago-exitoso.html?orden=${encodeURIComponent(venta.flowOrder)}&curso=${encodeURIComponent(venta.courseId)}`)
+      : res.redirect(`${baseUrl}/pago-fallido.html?estado=${encodeURIComponent(venta.estado)}&orden=${encodeURIComponent(venta.flowOrder)}`);
   } catch (err) {
     console.error('[pagos] retornoPago:', err.message);
     res.redirect(`${baseUrl}/pago-fallido.html?error=servidor`);
@@ -453,9 +453,15 @@ export const estadoPago = async (req, res) => {
     if (!token) return res.status(400).json({ error: 'token requerido' });
     const venta = await prisma.venta.findUnique({
       where: { flowToken: token },
-      select: { estado: true, flowOrder: true, monto: true, courseId: true },
+      select: { estado: true, flowOrder: true, monto: true, courseId: true, userId: true },
     });
     if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
+    // IDOR fix: solo el comprador, admin o el instructor del curso pueden ver el estado
+    const isAdmin = req.user.role === 'ADMIN';
+    const isOwner = venta.userId === req.user.id;
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
     res.json(venta);
   } catch (err) {
     res.status(500).json({ error: 'Error consultando estado' });

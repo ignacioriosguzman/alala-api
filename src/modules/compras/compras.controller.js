@@ -75,10 +75,12 @@ export const reporte = async (req, res) => {
   }
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const comprarInvitado = async (req, res) => {
   try {
     const { email, nombre, contenidoId, cuponCodigo } = req.body;
-    if (!email) return res.status(400).json({ error: "email requerido" });
+    if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: "email inválido" });
     if (!contenidoId) return res.status(400).json({ error: "contenidoId requerido" });
     const result = await comprarContenidoInvitado(email, nombre, contenidoId, cuponCodigo);
     res.status(201).json(result);
@@ -101,7 +103,7 @@ export const bundle = async (req, res) => {
 export const bundleInvitado = async (req, res) => {
   try {
     const { email, nombre, contenidoIds } = req.body;
-    if (!email) return res.status(400).json({ error: "email requerido" });
+    if (!email || !EMAIL_RE.test(email)) return res.status(400).json({ error: "email inválido" });
     if (!Array.isArray(contenidoIds)) return res.status(400).json({ error: "contenidoIds debe ser un array" });
     const compras = await comprarBundleInvitado(email, nombre, contenidoIds);
     res.status(201).json(compras);

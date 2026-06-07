@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { authGuard, optionalAuth } from "../../middlewares/authGuard.js";
 import { roleGuard } from "../../middlewares/roleGuard.js";
 import {
@@ -23,6 +24,14 @@ import {
 } from "./microcontenidos.controller.js";
 
 const router = express.Router();
+
+const invitadoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas solicitudes. Intenta más tarde." },
+});
 
 // Rutas específicas PRIMERO (antes de /:id para evitar conflictos)
 router.get("/mis-microcontenidos", authGuard, misMicros);
@@ -50,6 +59,6 @@ router.post("/:id/progreso", optionalAuth, guardarProgreso);
 
 // Compras
 router.post("/:id/comprar", authGuard, comprar);
-router.post("/:id/comprar-invitado", comprarInvitado);
+router.post("/:id/comprar-invitado", invitadoLimiter, comprarInvitado);
 
 export default router;

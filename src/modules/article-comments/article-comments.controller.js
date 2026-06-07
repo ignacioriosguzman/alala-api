@@ -15,6 +15,16 @@ export const listar = async (req, res) => {
   }
 };
 
+// Sanitización básica contra XSS en comentarios
+const sanitizeHtml = (str) => {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+};
+
 export const crear = async (req, res) => {
   const userId = req.user.id;
   const { articuloId } = req.params;
@@ -29,7 +39,7 @@ export const crear = async (req, res) => {
 
   try {
     const comentario = await prisma.articleComment.create({
-      data: { articuloId, userId, contenido: contenido.trim() },
+      data: { articuloId, userId, contenido: sanitizeHtml(contenido.trim()) },
     });
     return res.status(201).json({
       ok: true,
