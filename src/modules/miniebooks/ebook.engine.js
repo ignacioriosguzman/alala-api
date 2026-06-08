@@ -150,9 +150,21 @@ export const parseDocx = async (buffer) => {
 /**
  * Limpia HTML de estilos inline y elementos no deseados
  */
+const ALLOWED_TAGS = new Set(['p','h1','h2','h3','h4','h5','h6','br','strong','b','em','i','u','ul','ol','li','blockquote','span','a','img','table','thead','tbody','tr','th','td','hr','pre','code']);
+const DANGEROUS_ATTRS = /^(on\w+|href\s*=\s*['"]?javascript|src\s*=\s*['"]?javascript|data\s*=)/i;
+
 const limpiarHtml = (html) => {
   if (!html) return '';
   let clean = html;
+  // Eliminar tags peligrosos completos (script, style, iframe, object, embed)
+  clean = clean.replace(/<script[\s\S]*?<\/script>/gi, '');
+  clean = clean.replace(/<style[\s\S]*?<\/style>/gi, '');
+  clean = clean.replace(/<(iframe|object|embed|form|input|button|meta|link|base)[^>]*>[\s\S]*?<\/\1>/gi, '');
+  clean = clean.replace(/<(iframe|object|embed|form|input|button|meta|link|base)[^>]*\/?>/gi, '');
+  // Eliminar event handlers inline (onclick, onerror, etc.)
+  clean = clean.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+  // Eliminar javascript: en href/src
+  clean = clean.replace(/\b(href|src|action)\s*=\s*(['"])\s*javascript:[^'"]*\2/gi, '');
   // Eliminar estilos inline
   clean = clean.replace(/\s*style="[^"]*"/gi, '');
   // Eliminar clases inline

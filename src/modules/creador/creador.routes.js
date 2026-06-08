@@ -1,13 +1,15 @@
 import { Router } from "express";
 import { authGuard } from "../../middlewares/authGuard.js";
+import { roleGuard } from "../../middlewares/roleGuard.js";
 import { resumen, microcursos, manuales, ventas } from "./creador.controller.js";
 
 const router = Router();
 
-// Todos los endpoints del panel de creador requieren autenticación
-router.get("/resumen",    authGuard, resumen);
-router.get("/microcursos", authGuard, microcursos);
-router.get("/manuales",   authGuard, manuales);
-router.get("/ventas",     authGuard, ventas);
+const guard = [authGuard, roleGuard("CREATOR", "INSTRUCTOR", "ADMIN")];
+
+router.get("/resumen",     ...guard, resumen);
+router.get("/microcursos", ...guard, microcursos);
+router.get("/manuales",    ...guard, manuales);
+router.get("/ventas",      ...guard, ventas);
 
 export default router;

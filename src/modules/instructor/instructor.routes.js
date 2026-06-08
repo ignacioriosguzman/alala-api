@@ -5,7 +5,7 @@ import { ventas, saldo, cursos } from "./instructor.controller.js";
 
 const router = express.Router();
 
-const guard = [authGuard, roleGuard("INSTRUCTOR", "ADMIN")];
+const guard = [authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN")];
 
 router.get("/ventas/:id", ...guard, ventas);
 router.get("/saldo/:id", ...guard, saldo);

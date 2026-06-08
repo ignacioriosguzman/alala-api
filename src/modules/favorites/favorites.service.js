@@ -58,3 +58,9 @@ export const checkFavorite = async (userId, courseId) => {
   });
   return { favorito: !!existing };
 };
+
+export const deleteFavorite = async (userId, courseId) => {
+  await prisma.favorite.deleteMany({
+    where: { userId: Number(userId), courseId: Number(courseId) }
+  });
+};

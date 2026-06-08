@@ -397,23 +397,40 @@ export const getHistorialPagos = async () => {
 };
 
 export const marcarPagado = async (creatorId, { monto, descripcion, referencia, adminId }) => {
-  if (!monto || monto <= 0) throw new Error("Monto inválido");
+  const montoNum = Number(monto);
+  if (!montoNum || montoNum <= 0) throw new Error("Monto inválido");
   const creator = await prisma.user.findUnique({ where: { id: Number(creatorId) }, select: { id: true, nombre: true } });
   if (!creator) throw new Error("Creador no encontrado");
 
-  const periodo = new Date().toISOString().slice(0, 7); // "2026-06"
-  return prisma.pagoCreador.create({
-    data: {
-      creatorId: Number(creatorId),
-      monto:     Number(monto),
-      descripcion,
-      referencia,
-      periodo,
-      adminId:   adminId ? Number(adminId) : null,
-      pagadoEn:  new Date(),
-    },
-    include: { creator: { select: { nombre: true, email: true } } },
-  });
+  const saldo = await prisma.instructorSaldo.findUnique({ where: { userId: Number(creatorId) } });
+  const disponible = saldo?.saldoPendiente ?? 0;
+  if (montoNum > disponible) {
+    throw new Error(`Saldo insuficiente. El creador tiene ${disponible} CLP disponibles y el monto es ${montoNum} CLP`);
+  }
+
+  const periodo = new Date().toISOString().slice(0, 7);
+  const [pago] = await prisma.$transaction([
+    prisma.pagoCreador.create({
+      data: {
+        creatorId: Number(creatorId),
+        monto:     montoNum,
+        descripcion,
+        referencia,
+        periodo,
+        adminId:   adminId ? Number(adminId) : null,
+        pagadoEn:  new Date(),
+      },
+      include: { creator: { select: { nombre: true, email: true } } },
+    }),
+    prisma.instructorSaldo.update({
+      where: { userId: Number(creatorId) },
+      data: {
+        saldoPendiente: { decrement: montoNum },
+        saldoPagado:    { increment: montoNum },
+      },
+    }),
+  ]);
+  return pago;
 };
 
 // ════════════════════════════════════════════════════════════════════════════

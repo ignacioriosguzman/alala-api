@@ -54,10 +54,10 @@ export const registerUser = async (data) => {
   if (existe) throw new Error("Este email ya está registrado");
   const hashed = await bcrypt.hash(data.password, 12);
   const user = await prisma.user.create({
-    data: { nombre: data.nombre.trim(), email: data.email.toLowerCase(), password: hashed }
+    data: { nombre: data.nombre.trim(), email: data.email.toLowerCase(), password: hashed, verificado: false }
   });
-  const tokens = await generarTokens(user);
-  return { user, ...tokens };
+  const verificationToken = generarTokenVerificacion(user);
+  return { user, verificationToken };
 };
 
 export const registerInstructor = async (data) => {
@@ -85,8 +85,8 @@ export const loginUser = async (email, password) => {
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return null;
 
-  if (user.role === 'INSTRUCTOR' && !user.verificado) {
-    const err = new Error('Debes confirmar tu correo para iniciar sesión');
+  if (!user.verificado) {
+    const err = new Error('Debes confirmar tu correo para iniciar sesión. Revisa tu bandeja de entrada o solicita un nuevo enlace.');
     err.code = 'EMAIL_NOT_VERIFIED';
     throw err;
   }
@@ -116,7 +116,7 @@ export const refreshAccessToken = async (refreshToken) => {
   return { accessToken, refreshToken: newRefreshToken, user };
 };
 
-export const confirmarEmailInstructor = async (token) => {
+export const confirmarEmail = async (token) => {
   let payload;
   try {
     payload = jwt.decode(token);
@@ -150,7 +150,7 @@ export const reenviarConfirmacion = async (email) => {
   if (!email || !EMAIL_RE.test(email)) throw new Error('Email inválido');
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   // Respuesta genérica para no revelar si el email existe
-  if (!user || user.role !== 'INSTRUCTOR') return null;
+  if (!user) return null;
   if (user.verificado) return null;
   const verificationToken = generarTokenVerificacion(user);
   return { user, verificationToken };

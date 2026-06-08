@@ -1,4 +1,4 @@
-import { toggleFavorite, getFavoritesByUser, checkFavorite } from "./favorites.service.js";
+import { toggleFavorite, getFavoritesByUser, checkFavorite, deleteFavorite } from "./favorites.service.js";
 
 const handleError = (error, res) => {
   if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
@@ -32,6 +32,19 @@ export const check = async (req, res) => {
   try {
     const result = await checkFavorite(req.user.id, req.params.courseId);
     res.json(result);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const eliminarFavorito = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    if (!courseId || isNaN(Number(courseId))) {
+      return res.status(400).json({ error: "courseId debe ser un número válido" });
+    }
+    await deleteFavorite(req.user.id, courseId);
+    res.status(204).send();
   } catch (error) {
     handleError(error, res);
   }

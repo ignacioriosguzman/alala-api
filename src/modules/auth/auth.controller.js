@@ -5,7 +5,7 @@ import {
   refreshAccessToken,
   generarTokenReset,
   resetPassword,
-  confirmarEmailInstructor,
+  confirmarEmail,
   reenviarConfirmacion,
 } from "./auth.service.js";
 import prisma from "../../lib/prisma.js";
@@ -35,13 +35,19 @@ const userPublic = (u) => ({
 
 export const register = async (req, res) => {
   try {
-    const { user, accessToken, refreshToken } = await registerUser(req.body);
+    const { user, verificationToken } = await registerUser(req.body);
+
     res.status(201).json({
-      message: "Usuario registrado",
+      message: "Usuario registrado. Revisa tu correo para confirmar tu cuenta.",
       user: userPublic(user),
-      accessToken,
-      refreshToken,
     });
+
+    const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(verificationToken)}`;
+    enviarEmailVerificacionInstructor({ email: user.email, nombre: user.nombre, confirmUrl })
+      .then(r => {
+        if (r?.fallback) console.error('[auth][register] 🚫 SMTP mal configurado. Correo de verificación NO enviado a:', user.email);
+      })
+      .catch(err => console.error('[auth][register] 🚫 Error SMTP al enviar verificación:', err.message));
   } catch (error) {
     handleAuthError(error, res);
   }
@@ -163,12 +169,12 @@ export const confirmar = async (req, res) => {
     const { token } = req.query;
     if (!token) return res.status(400).json({ error: 'Token requerido' });
 
-    const result = await confirmarEmailInstructor(token);
+    const result = await confirmarEmail(token);
     if (result.ya_verificado) {
       return res.json({ ok: true, message: 'Tu cuenta ya estaba confirmada. Puedes iniciar sesión.' });
     }
 
-    res.json({ ok: true, message: '¡Cuenta confirmada! Ya puedes iniciar sesión como instructor.' });
+    res.json({ ok: true, message: '¡Cuenta confirmada! Ya puedes iniciar sesión.' });
 
     // Correo de bienvenida — solo en la primera confirmación, en background
     enviarEmailBienvenidaInstructor({ email: result.user.email, nombre: result.user.nombre })
@@ -196,7 +202,7 @@ export const reenviar = async (req, res) => {
 
     const result = await reenviarConfirmacion(email);
     // Responder inmediatamente — envío en background
-    res.json({ message: 'Si el correo corresponde a una cuenta de instructor pendiente, recibirás el enlace de confirmación.' });
+    res.json({ message: 'Si el correo corresponde a una cuenta pendiente de verificación, recibirás el enlace de confirmación.' });
 
     if (result) {
       const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(result.verificationToken)}`;
