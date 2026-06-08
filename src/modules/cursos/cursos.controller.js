@@ -15,7 +15,13 @@ const validarId = (id) => {
 
 export const listar = async (req, res) => {
   try {
-    const data = await getCursos();
+    const { limit, offset } = req.query;
+    const parsedLimit = limit != null ? Number(limit) : undefined;
+    const parsedOffset = offset != null ? Number(offset) : undefined;
+    if (parsedLimit !== undefined && (isNaN(parsedLimit) || parsedLimit < 1)) {
+      return res.status(400).json({ error: 'limit debe ser un número positivo' });
+    }
+    const data = await getCursos({ limit: parsedLimit, offset: parsedOffset });
     res.json(data);
   } catch (error) {
     handleError(error, res);

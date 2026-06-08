@@ -29,7 +29,7 @@ const sanitize = (data) => {
   return clean;
 };
 
-export const getCursos = async () => {
+export const getCursos = async ({ limit, offset } = {}) => {
   const [courses, contenidos] = await Promise.all([
     prisma.course.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.contenidoDigital.findMany({
@@ -63,7 +63,10 @@ export const getCursos = async () => {
   }));
 
   const cursosConTipo = courses.map(c => ({ ...c, _tipo: "curso" }));
-  return [...cursosConTipo, ...contenidosComo];
+  const todos = [...cursosConTipo, ...contenidosComo];
+  if (limit == null) return todos;
+  const off = Number(offset) || 0;
+  return todos.slice(off, off + Number(limit));
 };
 export const getCurso = async (id) => {
   const course = await prisma.course.findUnique({
