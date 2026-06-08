@@ -1,6 +1,6 @@
--- CreateTable: MicroContenido y tablas relacionadas
+-- CreateTable: MicroContenido y tablas relacionadas (IF NOT EXISTS para re-intentos seguros)
 
-CREATE TABLE "MicroContenido" (
+CREATE TABLE IF NOT EXISTS "MicroContenido" (
     "id" SERIAL NOT NULL,
     "titulo" TEXT NOT NULL,
     "descripcion" TEXT,
@@ -22,7 +22,7 @@ CREATE TABLE "MicroContenido" (
     CONSTRAINT "MicroContenido_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "CompraMicroContenido" (
+CREATE TABLE IF NOT EXISTS "CompraMicroContenido" (
     "id" SERIAL NOT NULL,
     "microContenidoId" INTEGER NOT NULL,
     "userId" INTEGER,
@@ -39,7 +39,7 @@ CREATE TABLE "CompraMicroContenido" (
     CONSTRAINT "CompraMicroContenido_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "ResenaMicroContenido" (
+CREATE TABLE IF NOT EXISTS "ResenaMicroContenido" (
     "id" SERIAL NOT NULL,
     "microContenidoId" INTEGER NOT NULL,
     "userId" INTEGER NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE "ResenaMicroContenido" (
     CONSTRAINT "ResenaMicroContenido_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "FavoriteMicroContenido" (
+CREATE TABLE IF NOT EXISTS "FavoriteMicroContenido" (
     "id" SERIAL NOT NULL,
     "userId" INTEGER NOT NULL,
     "microContenidoId" INTEGER NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE "FavoriteMicroContenido" (
     CONSTRAINT "FavoriteMicroContenido_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "ProgresoMicroContenido" (
+CREATE TABLE IF NOT EXISTS "ProgresoMicroContenido" (
     "id" SERIAL NOT NULL,
     "userId" INTEGER,
     "emailInvitado" TEXT,
@@ -71,53 +71,85 @@ CREATE TABLE "ProgresoMicroContenido" (
     CONSTRAINT "ProgresoMicroContenido_pkey" PRIMARY KEY ("id")
 );
 
--- Índices MicroContenido
-CREATE INDEX "MicroContenido_tipo_idx" ON "MicroContenido"("tipo");
-CREATE INDEX "MicroContenido_categoria_idx" ON "MicroContenido"("categoria");
-CREATE INDEX "MicroContenido_autorId_idx" ON "MicroContenido"("autorId");
-CREATE INDEX "MicroContenido_publicado_idx" ON "MicroContenido"("publicado");
+-- Índices (IF NOT EXISTS)
+CREATE INDEX IF NOT EXISTS "MicroContenido_tipo_idx" ON "MicroContenido"("tipo");
+CREATE INDEX IF NOT EXISTS "MicroContenido_categoria_idx" ON "MicroContenido"("categoria");
+CREATE INDEX IF NOT EXISTS "MicroContenido_autorId_idx" ON "MicroContenido"("autorId");
+CREATE INDEX IF NOT EXISTS "MicroContenido_publicado_idx" ON "MicroContenido"("publicado");
 
--- Índices CompraMicroContenido
-CREATE INDEX "CompraMicroContenido_flowToken_idx" ON "CompraMicroContenido"("flowToken");
-CREATE UNIQUE INDEX "CompraMicroContenido_userId_microContenidoId_key" ON "CompraMicroContenido"("userId", "microContenidoId");
-CREATE UNIQUE INDEX "CompraMicroContenido_emailInvitado_microContenidoId_key" ON "CompraMicroContenido"("emailInvitado", "microContenidoId");
+CREATE INDEX IF NOT EXISTS "CompraMicroContenido_flowToken_idx" ON "CompraMicroContenido"("flowToken");
+CREATE UNIQUE INDEX IF NOT EXISTS "CompraMicroContenido_userId_microContenidoId_key" ON "CompraMicroContenido"("userId", "microContenidoId");
+CREATE UNIQUE INDEX IF NOT EXISTS "CompraMicroContenido_emailInvitado_microContenidoId_key" ON "CompraMicroContenido"("emailInvitado", "microContenidoId");
 
--- Índices ResenaMicroContenido
-CREATE UNIQUE INDEX "ResenaMicroContenido_userId_microContenidoId_key" ON "ResenaMicroContenido"("userId", "microContenidoId");
-CREATE INDEX "ResenaMicroContenido_microContenidoId_idx" ON "ResenaMicroContenido"("microContenidoId");
+CREATE UNIQUE INDEX IF NOT EXISTS "ResenaMicroContenido_userId_microContenidoId_key" ON "ResenaMicroContenido"("userId", "microContenidoId");
+CREATE INDEX IF NOT EXISTS "ResenaMicroContenido_microContenidoId_idx" ON "ResenaMicroContenido"("microContenidoId");
 
--- Índices FavoriteMicroContenido
-CREATE UNIQUE INDEX "FavoriteMicroContenido_userId_microContenidoId_key" ON "FavoriteMicroContenido"("userId", "microContenidoId");
-CREATE INDEX "FavoriteMicroContenido_userId_idx" ON "FavoriteMicroContenido"("userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "FavoriteMicroContenido_userId_microContenidoId_key" ON "FavoriteMicroContenido"("userId", "microContenidoId");
+CREATE INDEX IF NOT EXISTS "FavoriteMicroContenido_userId_idx" ON "FavoriteMicroContenido"("userId");
 
--- Índices ProgresoMicroContenido
-CREATE UNIQUE INDEX "ProgresoMicroContenido_userId_microContenidoId_key" ON "ProgresoMicroContenido"("userId", "microContenidoId");
-CREATE UNIQUE INDEX "ProgresoMicroContenido_emailInvitado_microContenidoId_key" ON "ProgresoMicroContenido"("emailInvitado", "microContenidoId");
+CREATE UNIQUE INDEX IF NOT EXISTS "ProgresoMicroContenido_userId_microContenidoId_key" ON "ProgresoMicroContenido"("userId", "microContenidoId");
+CREATE UNIQUE INDEX IF NOT EXISTS "ProgresoMicroContenido_emailInvitado_microContenidoId_key" ON "ProgresoMicroContenido"("emailInvitado", "microContenidoId");
 
--- Foreign Keys
-ALTER TABLE "MicroContenido" ADD CONSTRAINT "MicroContenido_autorId_fkey"
-    FOREIGN KEY ("autorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- Foreign Keys (solo si no existen)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'MicroContenido_autorId_fkey') THEN
+    ALTER TABLE "MicroContenido" ADD CONSTRAINT "MicroContenido_autorId_fkey"
+      FOREIGN KEY ("autorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "CompraMicroContenido" ADD CONSTRAINT "CompraMicroContenido_microContenidoId_fkey"
-    FOREIGN KEY ("microContenidoId") REFERENCES "MicroContenido"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CompraMicroContenido_microContenidoId_fkey') THEN
+    ALTER TABLE "CompraMicroContenido" ADD CONSTRAINT "CompraMicroContenido_microContenidoId_fkey"
+      FOREIGN KEY ("microContenidoId") REFERENCES "MicroContenido"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "CompraMicroContenido" ADD CONSTRAINT "CompraMicroContenido_userId_fkey"
-    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'CompraMicroContenido_userId_fkey') THEN
+    ALTER TABLE "CompraMicroContenido" ADD CONSTRAINT "CompraMicroContenido_userId_fkey"
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "ResenaMicroContenido" ADD CONSTRAINT "ResenaMicroContenido_microContenidoId_fkey"
-    FOREIGN KEY ("microContenidoId") REFERENCES "MicroContenido"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ResenaMicroContenido_microContenidoId_fkey') THEN
+    ALTER TABLE "ResenaMicroContenido" ADD CONSTRAINT "ResenaMicroContenido_microContenidoId_fkey"
+      FOREIGN KEY ("microContenidoId") REFERENCES "MicroContenido"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "ResenaMicroContenido" ADD CONSTRAINT "ResenaMicroContenido_userId_fkey"
-    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ResenaMicroContenido_userId_fkey') THEN
+    ALTER TABLE "ResenaMicroContenido" ADD CONSTRAINT "ResenaMicroContenido_userId_fkey"
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "FavoriteMicroContenido" ADD CONSTRAINT "FavoriteMicroContenido_microContenidoId_fkey"
-    FOREIGN KEY ("microContenidoId") REFERENCES "MicroContenido"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FavoriteMicroContenido_microContenidoId_fkey') THEN
+    ALTER TABLE "FavoriteMicroContenido" ADD CONSTRAINT "FavoriteMicroContenido_microContenidoId_fkey"
+      FOREIGN KEY ("microContenidoId") REFERENCES "MicroContenido"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "FavoriteMicroContenido" ADD CONSTRAINT "FavoriteMicroContenido_userId_fkey"
-    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'FavoriteMicroContenido_userId_fkey') THEN
+    ALTER TABLE "FavoriteMicroContenido" ADD CONSTRAINT "FavoriteMicroContenido_userId_fkey"
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "ProgresoMicroContenido" ADD CONSTRAINT "ProgresoMicroContenido_microContenidoId_fkey"
-    FOREIGN KEY ("microContenidoId") REFERENCES "MicroContenido"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ProgresoMicroContenido_microContenidoId_fkey') THEN
+    ALTER TABLE "ProgresoMicroContenido" ADD CONSTRAINT "ProgresoMicroContenido_microContenidoId_fkey"
+      FOREIGN KEY ("microContenidoId") REFERENCES "MicroContenido"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
-ALTER TABLE "ProgresoMicroContenido" ADD CONSTRAINT "ProgresoMicroContenido_userId_fkey"
-    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ProgresoMicroContenido_userId_fkey') THEN
+    ALTER TABLE "ProgresoMicroContenido" ADD CONSTRAINT "ProgresoMicroContenido_userId_fkey"
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+  END IF;
+END $$;
