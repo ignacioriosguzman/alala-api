@@ -7,13 +7,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  STUDENT
+  INSTRUCTOR
+  CREATOR
+  ADMIN
+}
+
+enum CourseModalidad {
+  presencial
+  online
+  hibrido
+}
+
+enum ContenidoDigitalStatus {
+  borrador
+  activo
+  pausado
+}
+
+enum SolicitudRetiroEstado {
+  pendiente
+  procesado
+  rechazado
+}
+
+enum MiniEbookTemplate {
+  minimalista
+  cinematografica
+  poetica
+  motivacional
+}
+
 model User {
   id                Int                @id @default(autoincrement())
   nombre            String
   email             String             @unique
   password          String
-  role              String             @default("STUDENT")
-  verificado        Boolean            @default(true)
+  role              UserRole           @default(STUDENT)
+  verificado        Boolean            @default(false)
   activo            Boolean            @default(true)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
@@ -37,6 +69,15 @@ model User {
   comentarios       ArticleComment[]
   articulosFav      ArticleFavorite[]
   listas            UserList[]
+  mensajesEnviados  Mensaje[]          @relation("MensajeRemitente")
+  mensajesRecibidos Mensaje[]          @relation("MensajeDestinatario")
+  eventosAnaliticos EventoAnalitico[]
+  retiros           SolicitudRetiro[]
+  retirosAdmin      SolicitudRetiro[]  @relation("SolicitudRetiroAdmin")
+  pagosAdmin        PagoCreador[]      @relation("PagoCreadorAdmin")
+  favoritesContenido FavoriteContenido[]
+  favoritesMicroContenido FavoriteMicroContenido[]
+  favoritesMiniEbook FavoriteMiniEbook[]
 
   @@index([email])
   @@index([role])
@@ -52,12 +93,13 @@ model SiteConfig {
 model PagoCreador {
   id          Int       @id @default(autoincrement())
   creatorId   Int
-  creator     User      @relation(fields: [creatorId], references: [id])
+  creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   monto       Int
   descripcion String?
   periodo     String?
   referencia  String?
   adminId     Int?
+  admin       User?     @relation("PagoCreadorAdmin", fields: [adminId], references: [id])
   pagadoEn    DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -66,10 +108,30 @@ model PagoCreador {
   @@index([createdAt])
 }
 
+model SolicitudRetiro {
+  id          Int                   @id @default(autoincrement())
+  userId      Int
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monto       Int
+  estado      SolicitudRetiroEstado @default(pendiente)
+  metodo      String?               // transferencia | otro
+  cuenta      String?               // datos de cuenta bancaria
+  respuesta   String?               // respuesta del admin
+  procesadoEn DateTime?
+  adminId     Int?
+  admin       User?                 @relation("SolicitudRetiroAdmin", fields: [adminId], references: [id])
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([estado])
+  @@index([createdAt])
+}
+
 model CreatorProfile {
   id            Int      @id @default(autoincrement())
   userId        Int      @unique
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   nombrePublico String
   bio           String?
   avatar        String?
@@ -96,16 +158,16 @@ model Course {
   id                 Int          @id @default(autoincrement())
   titulo             String
   descripcion        String
-  descripcion_larga  String?
+  descripcionLarga   String?
   objetivos          String?
-  contenido_programa String?
+  contenidoPrograma  String?
   requisitos         String?
   nivel              String?
   duracion           String?
   materiales         String?
   beneficios         String?
   instructor         String
-  instructor_bio     String?
+  instructorBio      String?
   instructorUserId   Int?
   instructorUser     User?        @relation(fields: [instructorUserId], references: [id])
   modulos            String?
@@ -115,7 +177,7 @@ model Course {
   ciudad             String?
   lat                Float?
   lng                Float?
-  modalidad          String?
+  modalidad          CourseModalidad?
   direccion          String?
   fechaInicio        DateTime?
   createdAt          DateTime     @default(now())
@@ -125,6 +187,7 @@ model Course {
   reviews            Review[]
   favorites          Favorite[]
   mensajes           Mensaje[]
+  eventosAnaliticos  EventoAnalitico[]
 
   @@index([categoria])
   @@index([instructorUserId])
@@ -136,8 +199,12 @@ model Enrollment {
   userId    Int
   courseId  Int
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-  course    Course   @relation(fields: [courseId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
 }
 
 model Venta {
@@ -154,9 +221,14 @@ model Venta {
   flowData           Json?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
-  user               User     @relation("VentaComprador", fields: [userId], references: [id])
-  course             Course   @relation(fields: [courseId], references: [id])
-  instructorUser     User?    @relation("VentaInstructor", fields: [instructorUserId], references: [id])
+  user               User     @relation("VentaComprador", fields: [userId], references: [id], onDelete: Cascade)
+  course             Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  instructorUser     User?    @relation("VentaInstructor", fields: [instructorUserId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([instructorUserId])
+  @@index([estado])
 }
 
 model InstructorSaldo {
@@ -166,18 +238,19 @@ model InstructorSaldo {
   saldoAcumulado Int      @default(0)
   saldoPagado    Int      @default(0)
   updatedAt      DateTime @updatedAt
-  user           User     @relation(fields: [userId], references: [id])
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {
   id        Int       @id @default(autoincrement())
   token     String    @unique
   userId    Int
-  user      User      @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
   expiresAt DateTime?
 
   @@index([expiresAt])
+  @@index([userId])
 }
 
 model Review {
@@ -187,8 +260,12 @@ model Review {
   rating     Int
   comentario String
   createdAt  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id])
-  curso      Course   @relation(fields: [cursoId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  curso      Course   @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cursoId])
+  @@index([cursoId])
+  @@index([userId])
 }
 
 model Favorite {
@@ -196,19 +273,27 @@ model Favorite {
   userId    Int
   courseId  Int
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-  curso     Course   @relation(fields: [courseId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  curso     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
+  @@index([userId])
 }
 
 model EventoAnalitico {
   id        Int      @id @default(autoincrement())
   tipo      String
   cursoId   Int?
+  course    Course?  @relation(fields: [cursoId], references: [id])
   userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
   metadata  Json?
   createdAt DateTime @default(now())
+
+  @@index([tipo])
+  @@index([cursoId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Mensaje {
@@ -219,7 +304,14 @@ model Mensaje {
   texto          String
   leido          Boolean  @default(false)
   createdAt      DateTime @default(now())
-  curso          Course   @relation(fields: [cursoId], references: [id])
+  curso          Course   @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  remitente      User     @relation("MensajeRemitente", fields: [remitenteId], references: [id])
+  destinatario   User     @relation("MensajeDestinatario", fields: [destinatarioId], references: [id])
+
+  @@index([cursoId])
+  @@index([remitenteId])
+  @@index([destinatarioId])
+  @@index([leido])
 }
 
 model ContenidoDigital {
@@ -241,7 +333,7 @@ model ContenidoDigital {
   nivel              String? // principiante | intermedio | avanzado | todos
   creatorId          Int
   creator            User                @relation(fields: [creatorId], references: [id])
-  status             String              @default("borrador") // borrador | activo | pausado
+  status             ContenidoDigitalStatus @default(borrador)
   comisionPct        Float               @default(12.0) // cursos=12%, microcontenidos/ebooks=20%
   ventas             Int                 @default(0)
   rating             Float               @default(0)
@@ -265,9 +357,9 @@ model ContenidoDigital {
 model CompraContenido {
   id                 Int              @id @default(autoincrement())
   contenidoId        Int
-  contenido          ContenidoDigital @relation(fields: [contenidoId], references: [id])
+  contenido          ContenidoDigital @relation(fields: [contenidoId], references: [id], onDelete: Cascade)
   userId             Int
-  user               User             @relation(fields: [userId], references: [id])
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   monto              Int
   comisionPlataforma Int
   pagoCreador        Int
@@ -279,17 +371,23 @@ model CompraContenido {
 
   @@unique([userId, contenidoId])
   @@index([flowToken])
+  @@index([userId])
+  @@index([contenidoId])
+  @@index([estado])
 }
 
 model ResenaContenido {
   id          Int              @id @default(autoincrement())
   contenidoId Int
-  contenido   ContenidoDigital @relation(fields: [contenidoId], references: [id])
+  contenido   ContenidoDigital @relation(fields: [contenidoId], references: [id], onDelete: Cascade)
   userId      Int
-  user        User             @relation(fields: [userId], references: [id])
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   rating      Int
   comentario  String
   createdAt   DateTime         @default(now())
+
+  @@unique([userId, contenidoId])
+  @@index([contenidoId])
 }
 
 model Cupon {
@@ -304,6 +402,11 @@ model Cupon {
   fechaExpiracion DateTime?
   createdAt       DateTime         @default(now())
   comprasInvitado CompraInvitado[]
+
+  @@index([creatorId])
+  @@index([contenidoId])
+  @@index([activo])
+  @@index([fechaExpiracion])
 }
 
 model CompraInvitado {
@@ -311,7 +414,7 @@ model CompraInvitado {
   email              String
   nombre             String?
   contenidoId        Int
-  contenido          ContenidoDigital @relation(fields: [contenidoId], references: [id])
+  contenido          ContenidoDigital @relation(fields: [contenidoId], references: [id], onDelete: Cascade)
   monto              Int
   comisionPlataforma Int
   pagoCreador        Int
@@ -320,6 +423,9 @@ model CompraInvitado {
   estado             String           @default("completada")
   downloadUrl        String?
   createdAt          DateTime         @default(now())
+
+  @@index([email])
+  @@index([contenidoId])
 }
 
 model ProgresoLectura {
@@ -334,6 +440,7 @@ model ProgresoLectura {
 
   @@unique([userId, contenidoId])
   @@unique([emailInvitado, contenidoId])
+  @@index([contenidoId])
 }
 
 model FavoriteContenido {
@@ -341,9 +448,11 @@ model FavoriteContenido {
   userId      Int
   contenidoId Int
   createdAt   DateTime         @default(now())
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   contenido   ContenidoDigital @relation(fields: [contenidoId], references: [id], onDelete: Cascade)
 
   @@unique([userId, contenidoId])
+  @@index([userId])
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -359,7 +468,7 @@ model MicroContenido {
   autorId       Int
   autor         User     @relation(fields: [autorId], references: [id])
   precio        Int?     // null = gratuito
-  comisionPct   Int      @default(20) // % comisión plataforma
+  comisionPct   Float    @default(20.0) // % comisión plataforma
   ventas        Int      @default(0)
   publicado     Boolean  @default(true)
   portadaUrl    String?
@@ -367,8 +476,8 @@ model MicroContenido {
   palabrasClave String[]
   paginas       Int?
   lecturaMin    Int?     // tiempo estimado de lectura en minutos
-  creadoEn      DateTime @default(now())
-  actualizadoEn DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   compras         CompraMicroContenido[]
   resenas         ResenaMicroContenido[]
@@ -384,7 +493,7 @@ model MicroContenido {
 model CompraMicroContenido {
   id                 Int             @id @default(autoincrement())
   microContenidoId   Int
-  microContenido     MicroContenido  @relation(fields: [microContenidoId], references: [id])
+  microContenido     MicroContenido  @relation(fields: [microContenidoId], references: [id], onDelete: Cascade)
   userId             Int?
   emailInvitado      String?
   monto              Int
@@ -404,21 +513,26 @@ model CompraMicroContenido {
 model ResenaMicroContenido {
   id               Int            @id @default(autoincrement())
   microContenidoId Int
-  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id])
+  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id], onDelete: Cascade)
   userId           Int
   rating           Int
   comentario       String
   createdAt        DateTime       @default(now())
+
+  @@unique([userId, microContenidoId])
+  @@index([microContenidoId])
 }
 
 model FavoriteMicroContenido {
   id               Int            @id @default(autoincrement())
   userId           Int
   microContenidoId Int
-  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id])
+  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt        DateTime       @default(now())
 
   @@unique([userId, microContenidoId])
+  @@index([userId])
 }
 
 model ProgresoMicroContenido {
@@ -426,7 +540,7 @@ model ProgresoMicroContenido {
   userId           Int?
   emailInvitado    String?
   microContenidoId Int
-  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id])
+  microContenido   MicroContenido @relation(fields: [microContenidoId], references: [id], onDelete: Cascade)
   porcentaje       Float          @default(0)
   leidoCompleto    Boolean        @default(false)
   updatedAt        DateTime       @updatedAt
@@ -460,7 +574,7 @@ model MiniEbook {
   palabras          Int?
 
   // Metadatos
-  template          String   // "minimalista" | "cinematografica" | "poetica" | "motivacional"
+  template          MiniEbookTemplate
   categoria         String   @default("General")
   palabrasClave     String[]
   idioma            String   @default("es")
@@ -502,7 +616,7 @@ model MiniEbook {
 model CompraMiniEbook {
   id                 Int       @id @default(autoincrement())
   miniEbookId        Int
-  miniEbook          MiniEbook @relation(fields: [miniEbookId], references: [id])
+  miniEbook          MiniEbook @relation(fields: [miniEbookId], references: [id], onDelete: Cascade)
   userId             Int?
   emailInvitado      String?
   monto              Int
@@ -522,21 +636,26 @@ model CompraMiniEbook {
 model ResenaMiniEbook {
   id          Int       @id @default(autoincrement())
   miniEbookId Int
-  miniEbook   MiniEbook @relation(fields: [miniEbookId], references: [id])
+  miniEbook   MiniEbook @relation(fields: [miniEbookId], references: [id], onDelete: Cascade)
   userId      Int
   rating      Int
   comentario  String
   createdAt   DateTime  @default(now())
+
+  @@unique([userId, miniEbookId])
+  @@index([miniEbookId])
 }
 
 model FavoriteMiniEbook {
   id          Int       @id @default(autoincrement())
   userId      Int
   miniEbookId Int
-  miniEbook   MiniEbook @relation(fields: [miniEbookId], references: [id])
+  miniEbook   MiniEbook @relation(fields: [miniEbookId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
 
   @@unique([userId, miniEbookId])
+  @@index([userId])
 }
 
 model ProgresoMiniEbook {
@@ -544,7 +663,7 @@ model ProgresoMiniEbook {
   userId        Int?
   emailInvitado String?
   miniEbookId   Int
-  miniEbook     MiniEbook @relation(fields: [miniEbookId], references: [id])
+  miniEbook     MiniEbook @relation(fields: [miniEbookId], references: [id], onDelete: Cascade)
   porcentaje    Float     @default(0)
   leidoCompleto Boolean   @default(false)
   updatedAt     DateTime  @updatedAt
