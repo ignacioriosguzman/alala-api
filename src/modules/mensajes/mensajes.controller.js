@@ -1,6 +1,6 @@
 import prisma from "../../lib/prisma.js";
 
-import { createMensaje, getMensajesByCurso, countNoLeidos } from "./mensajes.service.js";
+import { createMensaje, getMensajesByCurso, countNoLeidos, getMensajesByUsuario } from "./mensajes.service.js";
 
 
 
@@ -93,6 +93,15 @@ export const noLeidos = async (req, res) => {
   try {
     const count = await countNoLeidos(req.user.id);
     res.json({ noLeidos: count });
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const listarPorUsuario = async (req, res) => {
+  try {
+    const mensajes = await getMensajesByUsuario(req.user.id);
+    res.json(mensajes);
   } catch (error) {
     handleError(error, res);
   }

@@ -36,17 +36,23 @@ const invitadoLimiter = rateLimit({
   message: { error: "Demasiadas solicitudes. Intenta más tarde." },
 });
 
-// Públicos
+// Rutas específicas ANTES de las dinámicas /:id para evitar shadowing
+router.get("/mis-ebooks", authGuard, misEbooks);
+router.get("/mis-compras", authGuard, getMisCompras);
+router.get("/favoritos/mis-favoritos", authGuard, misFavoritos);
+router.get("/estadisticas/mis-stats", authGuard, estadisticas);
+
+// Públicos (dinámicos — van después de las rutas específicas)
 router.get("/", listar);
 router.get("/:id", obtener);
 router.get("/:id/upsell", upsell);
 router.get("/:id/progreso", getProgreso);
 router.get("/:id/resenas", listarResenasCtrl);
 router.get("/:id/compra/check", checkCompra);
+router.get("/:id/favorito/check", authGuard, checkFav);
 
 // Requieren auth (creador)
 router.post("/", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), crear);
-router.get("/mis-ebooks", authGuard, misEbooks);
 router.patch("/:id", authGuard, editar);
 router.patch("/:id/status", authGuard, cambiarEstado);
 router.delete("/:id", authGuard, eliminar);
@@ -54,8 +60,6 @@ router.post("/:id/generar", authGuard, generar);
 
 // Favoritos
 router.post("/:id/favorito", authGuard, toggleFav);
-router.get("/favoritos/mis-favoritos", authGuard, misFavoritos);
-router.get("/:id/favorito/check", authGuard, checkFav);
 
 // Progreso
 router.post("/:id/progreso", optionalAuth, saveProgreso);
@@ -63,10 +67,6 @@ router.post("/:id/progreso", optionalAuth, saveProgreso);
 // Compras
 router.post("/:id/comprar", authGuard, comprar);
 router.post("/:id/comprar-invitado", invitadoLimiter, comprarInvitado);
-router.get("/mis-compras", authGuard, getMisCompras);
-
-// Estadísticas
-router.get("/estadisticas/mis-stats", authGuard, estadisticas);
 
 // Reseñas
 router.post("/:id/resenas", authGuard, crearResenaCtrl);

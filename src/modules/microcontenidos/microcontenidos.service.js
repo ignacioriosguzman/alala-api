@@ -8,7 +8,7 @@ const MICRO_FIELDS = [
   "paginas", "lecturaMin",
 ];
 
-const TIPOS_VALIDOS = ["microtexto", "manual", "instructivo", "minicurso"];
+const TIPOS_VALIDOS = ["microtexto", "manual", "instructivo", "minicurso", "micronovela", "relato"];
 
 const sanitize = (data) => {
   const clean = {};

@@ -5,9 +5,9 @@ import { roleGuard } from "../../middlewares/roleGuard.js";
 
 const router = Router();
 
+router.get("/admin/pendientes", authGuard, roleGuard("ADMIN"), listarPendientes);
 router.get("/:articuloId", listar);
 router.post("/:articuloId", authGuard, crear);
-router.get("/admin/pendientes", authGuard, roleGuard("ADMIN"), listarPendientes);
 router.patch("/:id/aprobar", authGuard, roleGuard("ADMIN"), aprobar);
 router.delete("/:id", authGuard, roleGuard("ADMIN"), eliminar);
 

@@ -69,7 +69,7 @@ export const subirPdf = async (req, res) => {
     const buffer = bufferDesdeBase64(fileBase64);
 
     if (buffer.length > MAX_PDF_BYTES) {
-      return res.status(400).json({ error: 'El archivo supera el límite de 50 MB' });
+      return res.status(400).json({ error: 'El archivo supera el límite de 10 MB' });
     }
     if (!validarMagicBytes(buffer, 'pdf')) {
       return res.status(400).json({ error: 'El archivo no es un PDF válido' });
@@ -112,7 +112,7 @@ export const generarPreview = async (req, res) => {
     const buffer = bufferDesdeBase64(fileBase64);
 
     if (buffer.length > MAX_PDF_BYTES) {
-      return res.status(400).json({ error: 'El archivo supera el límite de 50 MB' });
+      return res.status(400).json({ error: 'El archivo supera el límite de 10 MB' });
     }
     if (!validarMagicBytes(buffer, 'pdf')) {
       return res.status(400).json({ error: 'El archivo no es un PDF válido' });

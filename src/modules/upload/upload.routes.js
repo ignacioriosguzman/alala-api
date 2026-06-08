@@ -34,7 +34,7 @@ const avatarUpload = multer({
   },
 });
 
-const instructorGuard = [authGuard, roleGuard("INSTRUCTOR", "ADMIN")];
+const instructorGuard = [authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN")];
 
 // ── Rutas existentes (PDF / portada) ─────────────────────────────────────────
 router.post("/pdf",     ...instructorGuard, uploadLimiter, subirPdf);
