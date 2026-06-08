@@ -28,6 +28,7 @@ export const authGuard = async (req, res, next) => {
     });
     if (!user)        return res.status(401).json({ error: 'Token inválido o expirado' });
     if (!user.activo) return res.status(403).json({ error: 'Cuenta deshabilitada. Contacta soporte.' });
+    if (!user.verificado) return res.status(403).json({ error: 'Cuenta no verificada. Revisa tu email para confirmar tu cuenta.' });
     req.user = user;
     next();
   } catch {

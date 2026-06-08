@@ -24,10 +24,18 @@ const retornoLimiter = rateLimit({
   message: { error: "Demasiados intentos. Intenta más tarde." },
 });
 
-router.post("/crear", authGuard, crearOrden);
-router.post("/contenido/crear", authGuard, crearOrdenContenido);
-router.post("/micro/crear", authGuard, crearOrdenMicro);
-router.post("/ebook/crear", authGuard, crearOrdenEbook);
+const ordenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // máximo 10 órdenes por ventana
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas órdenes de pago. Intenta más tarde." },
+});
+
+router.post("/crear", authGuard, ordenLimiter, crearOrden);
+router.post("/contenido/crear", authGuard, ordenLimiter, crearOrdenContenido);
+router.post("/micro/crear", authGuard, ordenLimiter, crearOrdenMicro);
+router.post("/ebook/crear", authGuard, ordenLimiter, crearOrdenEbook);
 router.post("/confirmacion", webhookLimiter, confirmarPago);   // webhook Flow — sin auth, con rate limit
 router.get("/retorno", retornoLimiter, retornoPago);           // redirect Flow → frontend
 router.get("/estado/:token", authGuard, estadoPago);

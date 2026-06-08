@@ -1,3 +1,4 @@
+import { sanitizeObject } from "../../utils/sanitize.js";
 import {
   createReseña,
   getReseñasByContenido,
@@ -14,7 +15,7 @@ const handleError = (error, res) => {
 
 export const crear = async (req, res) => {
   try {
-    const data = { ...req.body, userId: req.user.id };
+    const data = sanitizeObject({ ...req.body, userId: req.user.id });
     if (!data.contenidoId) return res.status(400).json({ error: "contenidoId requerido" });
     const reseña = await createReseña(data);
     res.status(201).json(reseña);

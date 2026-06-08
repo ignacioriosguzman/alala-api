@@ -41,7 +41,7 @@ router.get("/mis-compras", authGuard, misCompras);
 // Públicos
 router.get("/", listar);
 router.get("/tipo/:tipo", porTipo);
-router.get("/:id", obtener);
+router.get("/:id", optionalAuth, obtener);
 router.get("/:id/upsell", upsell);
 router.get("/:id/progreso", obtenerProgreso);
 router.get("/:id/favorito/check", authGuard, checkFavorito);

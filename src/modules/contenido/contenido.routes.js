@@ -19,8 +19,8 @@ router.get("/catalogo", catalogo);
 router.get("/mis-contenidos", authGuard, misContenidos);
 router.get("/:id", obtener);
 router.get("/:id/upsell", upsell);
-router.patch("/:id", authGuard, editar);
-router.patch("/:id/status", authGuard, cambiarEstado);
-router.delete("/:id", authGuard, eliminar);
+router.patch("/:id", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), editar);
+router.patch("/:id/status", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), cambiarEstado);
+router.delete("/:id", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), eliminar);
 
 export default router;

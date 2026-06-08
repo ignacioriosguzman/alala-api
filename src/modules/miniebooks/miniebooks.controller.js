@@ -1,3 +1,4 @@
+import { sanitizeObject, sanitizeText } from "../../utils/sanitize.js";
 import {
   createEbook,
   listarEbooks,
@@ -34,7 +35,7 @@ const handleError = (error, res) => {
 
 export const crear = async (req, res) => {
   try {
-    const ebook = await createEbook(req.body, req.user.id);
+    const ebook = await createEbook(sanitizeObject(req.body), req.user.id);
     res.status(201).json(ebook);
   } catch (error) {
     handleError(error, res);
@@ -73,7 +74,7 @@ export const misEbooks = async (req, res) => {
 
 export const editar = async (req, res) => {
   try {
-    const ebook = await updateEbook(req.params.id, req.body, req.user.id);
+    const ebook = await updateEbook(req.params.id, sanitizeObject(req.body), req.user.id);
     res.json(ebook);
   } catch (error) {
     handleError(error, res);
@@ -243,7 +244,7 @@ export const crearResenaCtrl = async (req, res) => {
     if (!rating || !comentario) {
       return res.status(400).json({ error: "Rating y comentario requeridos" });
     }
-    const resena = await crearResena(req.params.id, req.user.id, rating, comentario);
+    const resena = await crearResena(req.params.id, req.user.id, rating, sanitizeText(comentario));
     res.status(201).json(resena);
   } catch (error) {
     handleError(error, res);

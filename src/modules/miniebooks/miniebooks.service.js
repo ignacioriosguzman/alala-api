@@ -82,7 +82,7 @@ export const getEbookById = (id) => {
   return prisma.miniEbook.findUnique({
     where: { id: Number(id) },
     include: {
-      autor: { select: { id: true, nombre: true, email: true } },
+      autor: { select: { id: true, nombre: true } },
       _count: { select: { resenas: true, compras: true } },
     },
   });

@@ -95,28 +95,41 @@ export const procesarSolicitud = async (id, adminId, { estado, respuesta }) => {
     throw Object.assign(new Error('La solicitud ya fue procesada'), { status: 409 });
   }
 
-  const [updated] = await prisma.$transaction([
-    prisma.solicitudRetiro.update({
+  // Transacción interactiva: re-verifica estado y saldo dentro del mismo bloque atómico
+  // para prevenir condición de carrera en procesamiento concurrente de retiros.
+  return prisma.$transaction(async (tx) => {
+    const sol = await tx.solicitudRetiro.findUnique({ where: { id } });
+    if (!sol || sol.estado !== 'pendiente') {
+      throw Object.assign(new Error('La solicitud ya fue procesada'), { status: 409 });
+    }
+
+    if (estado === 'procesado') {
+      const saldo = await tx.instructorSaldo.findUnique({ where: { userId: sol.userId } });
+      const disponible = saldo?.saldoPendiente ?? 0;
+      if (disponible < sol.monto) {
+        console.error(`[retiros] Saldo insuficiente al procesar id=${id}. Disponible=${disponible}, Requerido=${sol.monto}, userId=${sol.userId}`);
+        throw Object.assign(
+          new Error(`Saldo insuficiente al procesar. Disponible: ${disponible} CLP, requerido: ${sol.monto} CLP`),
+          { status: 400 }
+        );
+      }
+      await tx.instructorSaldo.update({
+        where: { userId: sol.userId },
+        data: {
+          saldoPendiente: { decrement: sol.monto },
+          saldoPagado:    { increment: sol.monto },
+        },
+      });
+    }
+
+    return tx.solicitudRetiro.update({
       where: { id },
       data: {
         estado,
-        respuesta: respuesta?.trim() || null,
+        respuesta:   respuesta?.trim() || null,
         procesadoEn: new Date(),
         adminId,
       },
-    }),
-    ...(estado === 'procesado'
-      ? [
-          prisma.instructorSaldo.update({
-            where: { userId: solicitud.userId },
-            data: {
-              saldoPendiente: { decrement: solicitud.monto },
-              saldoPagado: { increment: solicitud.monto },
-            },
-          }),
-        ]
-      : []),
-  ]);
-
-  return updated;
+    });
+  });
 };

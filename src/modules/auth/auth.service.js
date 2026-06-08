@@ -78,12 +78,16 @@ export const registerInstructor = async (data) => {
   return { user, verificationToken };
 };
 
+// Hash dummy con formato bcrypt válido para mitigar timing attacks
+const DUMMY_HASH = '$2a$12$abcdefghijklmnopqrstuvwxycdefghijklmnopqrstu';
+
 export const loginUser = async (email, password) => {
   if (!email || !password) return null;
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-  if (!user) return null;
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return null;
+  // Siempre ejecutar bcrypt.compare con un hash real para mantener tiempos constantes
+  const hashToCompare = user ? user.password : DUMMY_HASH;
+  const valid = await bcrypt.compare(password, hashToCompare);
+  if (!user || !valid) return null;
 
   if (!user.verificado) {
     const err = new Error('Debes confirmar tu correo para iniciar sesión. Revisa tu bandeja de entrada o solicita un nuevo enlace.');
@@ -105,7 +109,10 @@ export const refreshAccessToken = async (refreshToken) => {
   const stored = await prisma.refreshToken.findUnique({ where: { token: refreshToken } });
   if (!stored) return null;
   const user = await prisma.user.findUnique({ where: { id: stored.userId } });
-  if (!user) return null;
+  if (!user || !user.activo) {
+    console.warn(`[auth] refreshAccessToken bloqueado: usuario ${stored.userId} ${!user ? 'no existe' : 'inactivo'}`);
+    return null;
+  }
   // Rotate: delete old token and issue new one with expiry
   await prisma.refreshToken.delete({ where: { id: stored.id } });
   const newRefreshToken = generateRefreshToken(user);
@@ -164,7 +171,9 @@ export const generarTokenReset = async (email) => {
   if (!user) return null;
 
   const secret = process.env.JWT_SECRET + user.password;
-  const token = jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '1h' });
+  // NOTA DE SEGURIDAD: este token se invalida automáticamente al cambiar la contraseña
+  // porque el secreto incluye el hash actual del password. Ventana reducida a 15 min.
+  const token = jwt.sign({ id: user.id, email: user.email }, secret, { expiresIn: '15m' });
   return { token, user };
 };
 

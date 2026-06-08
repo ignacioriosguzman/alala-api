@@ -57,10 +57,10 @@ export const listarMicros = async (query = {}) => {
     ];
   }
 
-  let orderBy = { creadoEn: "desc" };
+  let orderBy = { createdAt: "desc" };
   if (orden === "popularidad") orderBy = { ventas: "desc" };
   else if (orden === "precio") orderBy = { precio: "asc" };
-  else if (orden === "nuevo") orderBy = { creadoEn: "desc" };
+  else if (orden === "nuevo") orderBy = { createdAt: "desc" };
 
   const pageNum = Math.max(1, Number(page));
   const limitNum = Math.min(50, Math.max(1, Number(limit)));
@@ -84,7 +84,7 @@ export const listarPorTipo = (tipo) => {
   if (!TIPOS_VALIDOS.includes(tipo)) throw new Error("Tipo inválido");
   return prisma.microContenido.findMany({
     where: { tipo, publicado: true },
-    orderBy: { creadoEn: "desc" },
+    orderBy: { createdAt: "desc" },
     include: {
       autor: { select: { id: true, nombre: true } },
       _count: { select: { resenas: true } },
@@ -96,7 +96,7 @@ export const getMicroById = (id) => {
   return prisma.microContenido.findUnique({
     where: { id: Number(id) },
     include: {
-      autor: { select: { id: true, nombre: true, email: true } },
+      autor: { select: { id: true, nombre: true } },
       _count: { select: { resenas: true, compras: true } },
     },
   });
@@ -105,7 +105,7 @@ export const getMicroById = (id) => {
 export const listarMisMicros = (autorId) => {
   return prisma.microContenido.findMany({
     where: { autorId: Number(autorId) },
-    orderBy: { creadoEn: "desc" },
+    orderBy: { createdAt: "desc" },
   });
 };
 
@@ -169,7 +169,7 @@ export const upsellMicros = async (microId, limit = 3) => {
         { categoria: target.categoria },
       ],
     },
-    orderBy: { creadoEn: "desc" },
+    orderBy: { createdAt: "desc" },
     take: Number(limit),
     include: {
       autor: { select: { id: true, nombre: true } },

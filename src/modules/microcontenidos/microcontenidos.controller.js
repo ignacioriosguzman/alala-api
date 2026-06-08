@@ -1,3 +1,4 @@
+import { sanitizeObject } from "../../utils/sanitize.js";
 import {
   createMicro,
   listarMicros,
@@ -29,7 +30,7 @@ const handleError = (error, res) => {
 
 export const crear = async (req, res) => {
   try {
-    const micro = await createMicro(req.body, req.user.id);
+    const micro = await createMicro(sanitizeObject(req.body), req.user.id);
     res.status(201).json(micro);
   } catch (error) {
     handleError(error, res);
@@ -60,6 +61,17 @@ export const obtener = async (req, res) => {
     if (!micro || !micro.publicado) {
       return res.status(404).json({ error: "MicroContenido no encontrado" });
     }
+
+    // Si el microcontenido tiene precio, verificar compra antes de entregar el contenido completo
+    if ((micro.precio ?? 0) > 0) {
+      const userId = req.user?.id ?? null;
+      const { comprado } = await verificarCompraMicro(userId, null, req.params.id);
+      if (!comprado) {
+        const { contenido, ...preview } = micro;
+        return res.json({ ...preview, contenido: null, acceso: 'bloqueado' });
+      }
+    }
+
     res.json(micro);
   } catch (error) {
     handleError(error, res);
@@ -77,7 +89,7 @@ export const misMicros = async (req, res) => {
 
 export const editar = async (req, res) => {
   try {
-    const micro = await updateMicro(req.params.id, req.body, req.user.id);
+    const micro = await updateMicro(req.params.id, sanitizeObject(req.body), req.user.id);
     res.json(micro);
   } catch (error) {
     handleError(error, res);

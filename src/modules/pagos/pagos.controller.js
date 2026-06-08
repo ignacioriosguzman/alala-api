@@ -88,6 +88,14 @@ export const confirmarPago = async (req, res) => {
     const flowStatus = await obtenerEstadoPago(token);
     const estado = ESTADO_FLOW[flowStatus.status] ?? 'DESCONOCIDO';
 
+    // Validación de integridad: comparar monto recibido contra monto almacenado
+    const montoRecibido = Number(flowStatus.amount);
+    if (!Number.isNaN(montoRecibido) && montoRecibido !== venta.monto) {
+      console.error(`[pagos] webhook: MISMATCH de monto. Local=${venta.monto}, Flow=${montoRecibido}, token=${token}`);
+      // No procesar el pago si el monto no coincide — posible manipulación o error
+      return res.status(400).send('monto inválido');
+    }
+
     // ── Identificar tipo de compra por flowToken ──────────────────────────────
     const [compraContenido, compraMicro, compraEbook] = await Promise.all([
       prisma.compraContenido.findFirst({ where: { flowToken: token } }),

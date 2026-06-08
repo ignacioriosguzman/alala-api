@@ -1,4 +1,5 @@
 import prisma from "../../lib/prisma.js";
+import { sanitizeText } from "../../utils/sanitize.js";
 
 import { createMensaje, getMensajesByCurso, countNoLeidos, getMensajesByUsuario } from "./mensajes.service.js";
 
@@ -53,7 +54,7 @@ export const enviar = async (req, res) => {
     const mensaje = await createMensaje({
       cursoId: cId,
       destinatarioId: dId,
-      texto,
+      texto: sanitizeText(texto),
       remitenteId: req.user.id,
     });
     res.status(201).json(mensaje);

@@ -1,3 +1,4 @@
+import { sanitizeText } from "../../utils/sanitize.js";
 import {
   getProfile, upsertProfile,
   getLink, registrarVisita, getStats,
@@ -31,7 +32,15 @@ export const crearPerfil = async (req, res) => {
     if (sitioWeb?.length > 500) return res.status(400).json({ error: "sitioWeb máximo 500 caracteres" });
     if (instagram?.length > 100) return res.status(400).json({ error: "instagram máximo 100 caracteres" });
     if (twitter?.length > 100) return res.status(400).json({ error: "twitter máximo 100 caracteres" });
-    const data = await upsertProfile(req.user.id, { nombrePublico, bio, avatar, especialidad, sitioWeb, instagram, twitter });
+    const data = await upsertProfile(req.user.id, {
+      nombrePublico: sanitizeText(nombrePublico),
+      bio: sanitizeText(bio),
+      avatar,
+      especialidad: sanitizeText(especialidad),
+      sitioWeb,
+      instagram: sanitizeText(instagram),
+      twitter: sanitizeText(twitter),
+    });
     ok(res, data);
   } catch (e) { fail(res, e); }
 };

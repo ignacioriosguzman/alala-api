@@ -1,3 +1,4 @@
+import { sanitizeObject } from "../../utils/sanitize.js";
 import {
   createContenido,
   listarCatalogo,
@@ -19,7 +20,7 @@ const handleError = (error, res) => {
 
 export const crear = async (req, res) => {
   try {
-    const contenido = await createContenido(req.body, req.user.id);
+    const contenido = await createContenido(sanitizeObject(req.body), req.user.id);
     res.status(201).json(contenido);
   } catch (error) {
     handleError(error, res);
@@ -58,7 +59,7 @@ export const misContenidos = async (req, res) => {
 
 export const editar = async (req, res) => {
   try {
-    const contenido = await updateContenido(req.params.id, req.body, req.user.id);
+    const contenido = await updateContenido(req.params.id, sanitizeObject(req.body), req.user.id);
     res.json(contenido);
   } catch (error) {
     handleError(error, res);
