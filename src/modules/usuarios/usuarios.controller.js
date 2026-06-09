@@ -1,4 +1,4 @@
-import { getUsuarios, getUsuario, updateUsuario, deleteUsuario } from "./usuarios.service.js";
+import { getUsuarios, getUsuario, getUsuarioPublico, updateUsuario, deleteUsuario } from "./usuarios.service.js";
 
 const handleError = (error, res) => {
   if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
@@ -16,6 +16,18 @@ const validarId = (id) => {
 export const listar = async (req, res) => {
   try {
     const data = await getUsuarios();
+    res.json(data);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const obtenerPublico = async (req, res) => {
+  try {
+    const id = validarId(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID inválido' });
+    const data = await getUsuarioPublico(id);
+    if (!data) return res.status(404).json({ error: 'Perfil no encontrado' });
     res.json(data);
   } catch (error) {
     handleError(error, res);
