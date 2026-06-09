@@ -2,6 +2,8 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import { authGuard, optionalAuth } from "../../middlewares/authGuard.js";
 import { roleGuard } from "../../middlewares/roleGuard.js";
+import { validate } from "../../middlewares/validate.js";
+import { microcontenidoSchema, microcontenidoPublicadoSchema, progresoSchema, compraInvitadoSchema } from "../../validators/schemas.js";
 import {
   crear,
   listar,
@@ -48,17 +50,17 @@ router.get("/:id/favorito/check", authGuard, checkFavorito);
 router.get("/:id/compra/check", checkCompra);
 
 // Requieren auth
-router.post("/", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), crear);
-router.patch("/:id", authGuard, editar);
-router.patch("/:id/publicado", authGuard, cambiarPublicado);
-router.delete("/:id", authGuard, eliminar);
+router.post("/", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), validate(microcontenidoSchema), crear);
+router.patch("/:id", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), validate(microcontenidoSchema.partial()), editar);
+router.patch("/:id/publicado", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), validate(microcontenidoPublicadoSchema), cambiarPublicado);
+router.delete("/:id", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), eliminar);
 
 // Favoritos y progreso
 router.post("/:id/favorito", authGuard, toggleFavorito);
-router.post("/:id/progreso", optionalAuth, guardarProgreso);
+router.post("/:id/progreso", optionalAuth, validate(progresoSchema), guardarProgreso);
 
 // Compras
 router.post("/:id/comprar", authGuard, comprar);
-router.post("/:id/comprar-invitado", invitadoLimiter, comprarInvitado);
+router.post("/:id/comprar-invitado", invitadoLimiter, validate(compraInvitadoSchema), comprarInvitado);
 
 export default router;

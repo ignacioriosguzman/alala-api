@@ -93,7 +93,7 @@ export const getActividad = async () => {
     }),
     prisma.user.findMany({
       orderBy: { createdAt: "desc" }, take: 8,
-      select: { id: true, nombre: true, email: true, role: true, createdAt: true, activo: true },
+      select: { id: true, nombre: true, role: true, createdAt: true, activo: true }
     }),
     // Últimas ventas de cursos
     prisma.venta.findMany({
@@ -137,7 +137,7 @@ export const getFinanzas = async () => {
   const rankingMap = new Map();
   for (const c of comprasContenido) {
     const cid = c.contenido.creatorId;
-    if (!rankingMap.has(cid)) rankingMap.set(cid, { id: cid, nombre: c.contenido.creator.nombre, email: c.contenido.creator.email, ingresos: 0, ventas: 0 });
+    if (!rankingMap.has(cid)) rankingMap.set(cid, { id: cid, nombre: c.contenido.creator.nombre, ingresos: 0, ventas: 0 });
     rankingMap.get(cid).ingresos += c.pagoCreador ?? 0;
     rankingMap.get(cid).ventas++;
   }

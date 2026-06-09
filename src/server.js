@@ -110,6 +110,27 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Demasiados intentos de autenticación. Intenta más tarde.' },
 });
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de inicio de sesión. Intenta más tarde.' },
+});
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de registro. Intenta más tarde.' },
+});
+const forgotLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de recuperación. Intenta más tarde.' },
+});
 app.use(generalLimiter);
 
 app.use(cors({
@@ -134,7 +155,7 @@ app.use("/uploads/avatars", express.static(UPLOADS_DIR, {
 app.get("/health", (req, res) => res.json({ status: "ok", service: "ALALA API" }));
 
 const v1 = express.Router();
-v1.use("/auth", authLimiter, authRoutes);
+v1.use("/auth", authRoutes);
 v1.use("/usuarios", usuariosRoutes);
 v1.use("/cursos", cursosRoutes);
 v1.use("/pagos", pagosRoutes);

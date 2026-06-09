@@ -59,9 +59,22 @@ export const detalleUsuario = async (req, res, next) => {
 
 export const cambiarRol = async (req, res, next) => {
   try {
-    const { role } = req.body;
+    const { role, confirmacion } = req.body;
     const rolesValidos = ["STUDENT","INSTRUCTOR","CREATOR","ADMIN"];
     if (!rolesValidos.includes(role)) return res.status(400).json({ error: "Rol inválido" });
+
+    // Verificación adicional para escalada a ADMIN
+    if (role === "ADMIN") {
+      const adminToken = process.env.ADMIN_ROLE_CHANGE_TOKEN;
+      if (!adminToken) {
+        return res.status(403).json({ error: "Cambio a ADMIN deshabilitado. Configure ADMIN_ROLE_CHANGE_TOKEN." });
+      }
+      if (confirmacion !== adminToken) {
+        console.error(`[Admin] Intento de cambio a ADMIN sin token válido por usuario ${req.user.id}`);
+        return res.status(403).json({ error: "Confirmación inválida para cambio a ADMIN" });
+      }
+    }
+
     ok(res, await svc.cambiarRolUsuario(req.params.id, role));
   } catch (e) { next(e); }
 };

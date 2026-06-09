@@ -1,6 +1,8 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { authGuard } from "../../middlewares/authGuard.js";
+import { validate } from "../../middlewares/validate.js";
+import { cuponSchema } from "../../validators/schemas.js";
 import {
   crear,
   misCupones,
@@ -18,7 +20,7 @@ const cuponLimiter = rateLimit({
   message: { error: "Demasiadas validaciones. Intenta más tarde." },
 });
 
-router.post("/", authGuard, crear);
+router.post("/", authGuard, validate(cuponSchema), crear);
 router.get("/mis-cupones", authGuard, misCupones);
 router.get("/validar", cuponLimiter, validar);
 router.patch("/:id/desactivar", authGuard, desactivar);

@@ -1,6 +1,7 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { authGuard } from "../../middlewares/authGuard.js";
+import { webhookIpGuard } from "../../middlewares/webhookIpGuard.js";
 import {
   crearOrden, crearOrdenContenido, crearOrdenMicro, crearOrdenEbook,
   confirmarPago, retornoPago, estadoPago,
@@ -36,7 +37,7 @@ router.post("/crear", authGuard, ordenLimiter, crearOrden);
 router.post("/contenido/crear", authGuard, ordenLimiter, crearOrdenContenido);
 router.post("/micro/crear", authGuard, ordenLimiter, crearOrdenMicro);
 router.post("/ebook/crear", authGuard, ordenLimiter, crearOrdenEbook);
-router.post("/confirmacion", webhookLimiter, confirmarPago);   // webhook Flow — sin auth, con rate limit
+router.post("/confirmacion", webhookIpGuard, webhookLimiter, confirmarPago);   // webhook Flow — IP whitelist + rate limit + HMAC
 router.get("/retorno", retornoLimiter, retornoPago);           // redirect Flow → frontend
 router.get("/estado/:token", authGuard, estadoPago);
 
