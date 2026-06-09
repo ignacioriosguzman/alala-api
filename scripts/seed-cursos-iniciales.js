@@ -155,7 +155,7 @@ const CURSOS = (instructorId, instructorNombre) => [
     imagen:
       "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200&q=80&fm=webp&auto=format",
     ciudad: "Santiago",
-    modalidad: "ONLINE",
+    modalidad: "online",
   },
   {
     titulo: "Introducción a ALALÁ: aprende a usar la plataforma",
@@ -183,7 +183,7 @@ const CURSOS = (instructorId, instructorNombre) => [
     imagen:
       "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1200&q=80&fm=webp&auto=format",
     ciudad: "Online",
-    modalidad: "ONLINE",
+    modalidad: "online",
   },
 ];
 
