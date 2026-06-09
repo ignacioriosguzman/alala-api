@@ -445,8 +445,8 @@ export const getModeracion = async () => {
       select: { id: true, titulo: true, tipo: true, status: true, createdAt: true, creator: { select: { nombre: true, email: true } } },
     }),
     prisma.microContenido.findMany({
-      where: { publicado: false }, orderBy: { creadoEn: "desc" }, take: 10,
-      select: { id: true, titulo: true, tipo: true, creadoEn: true, autor: { select: { nombre: true, email: true } } },
+      where: { publicado: false }, orderBy: { createdAt: "desc" }, take: 10,
+      select: { id: true, titulo: true, tipo: true, createdAt: true, autor: { select: { nombre: true, email: true } } },
     }),
     prisma.miniEbook.findMany({
       where: { status: { in: ["borrador","pausado"] } }, orderBy: { createdAt: "desc" }, take: 10,

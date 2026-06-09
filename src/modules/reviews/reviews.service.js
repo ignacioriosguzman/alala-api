@@ -18,11 +18,14 @@ export const createReview = async (data) => {
   });
   if (existente) throw new Error("Ya has reseñado este curso");
 
+  const rating = Number(data.rating);
+  if (!rating || rating < 1 || rating > 5) throw new Error("La calificación debe ser entre 1 y 5");
+
   return prisma.review.create({
     data: {
       cursoId,
       userId,
-      rating: Number(data.rating),
+      rating,
       comentario: data.comentario,
     },
     include: {

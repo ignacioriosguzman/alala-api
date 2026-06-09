@@ -11,6 +11,9 @@ export const comprarContenido = async (userId, contenidoId) => {
   if (!contenido) throw new Error("Contenido no encontrado");
   if (contenido.status !== "activo") throw new Error("Contenido no disponible");
 
+  const monto = contenido.precioOferta ?? contenido.precio;
+  if (monto > 0) throw new Error("Este contenido tiene un costo. Usa el flujo de pago.");
+
   const yaComprado = await prisma.compraContenido.findUnique({
     where: {
       userId_contenidoId: {
@@ -22,7 +25,6 @@ export const comprarContenido = async (userId, contenidoId) => {
 
   if (yaComprado) throw new Error("Ya has comprado este contenido");
 
-  const monto = contenido.precioOferta ?? contenido.precio;
   const comisionPlataforma = Math.round(monto * (contenido.comisionPct / 100));
   const pagoCreador = monto - comisionPlataforma;
 
