@@ -136,3 +136,23 @@ export const upsellRecomendaciones = async (id, limit = 3) => {
     },
   });
 };
+
+export const getMisCursos = async (userId) => {
+  const enrollments = await prisma.enrollment.findMany({
+    where: { userId },
+    include: { course: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  return enrollments.map(e => ({
+    ...e.course,
+    _tipo: 'curso',
+    fechaCompra: e.createdAt,
+  }));
+};
+
+export const verificarAcceso = async (userId, courseId) => {
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { userId, courseId: Number(courseId) },
+  });
+  return { tieneAcceso: !!enrollment };
+};

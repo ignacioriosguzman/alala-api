@@ -79,7 +79,7 @@ export const registerInstructor = async (data) => {
 };
 
 // Hash dummy con formato bcrypt válido para mitigar timing attacks
-const DUMMY_HASH = '$2a$12$abcdefghijklmnopqrstuvwxycdefghijklmnopqrstu';
+const DUMMY_HASH = '$2b$12$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 export const loginUser = async (email, password) => {
   if (!email || !password) return null;

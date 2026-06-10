@@ -1,4 +1,4 @@
-import { getCursos, getCurso, createCurso, updateCurso, deleteCurso, upsellRecomendaciones } from "./cursos.service.js";
+import { getCursos, getCurso, createCurso, updateCurso, deleteCurso, upsellRecomendaciones, getMisCursos, verificarAcceso } from "./cursos.service.js";
 
 const handleError = (error, res) => {
   if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
@@ -91,6 +91,26 @@ export const upsell = async (req, res) => {
     const id = validarId(req.params.id);
     if (!id) return res.status(400).json({ error: 'ID inválido' });
     const data = await upsellRecomendaciones(id, req.query.limit);
+    res.json(data);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const misCursos = async (req, res) => {
+  try {
+    const data = await getMisCursos(req.user.id);
+    res.json(data);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const acceso = async (req, res) => {
+  try {
+    const id = validarId(req.params.id);
+    if (!id) return res.status(400).json({ error: 'ID inválido' });
+    const data = await verificarAcceso(req.user.id, id);
     res.json(data);
   } catch (error) {
     handleError(error, res);

@@ -25,6 +25,12 @@ export const crearOrden = async (req, res) => {
     });
     if (yaMatriculado) return res.status(409).json({ error: 'Ya estás inscrito en este curso' });
 
+    // Inscripción gratuita: registrar directamente sin Flow
+    if (curso.precio === 0) {
+      await prisma.enrollment.create({ data: { userId, courseId: curso.id } });
+      return res.json({ gratis: true });
+    }
+
     const usuario = await prisma.user.findUnique({ where: { id: userId } });
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -349,7 +355,20 @@ export const crearOrdenMicro = async (req, res) => {
     const micro = await prisma.microContenido.findUnique({ where: { id: mid } });
     if (!micro) return res.status(404).json({ error: 'MicroContenido no encontrado' });
     if (!micro.publicado) return res.status(400).json({ error: 'Contenido no disponible' });
-    if ((micro.precio ?? 0) === 0) return res.status(400).json({ error: 'Usa el endpoint de acceso gratuito' });
+    // Acceso gratuito: registrar directamente sin Flow
+    if ((micro.precio ?? 0) === 0) {
+      const yaComprado = await prisma.compraMicroContenido.findUnique({
+        where: { userId_microContenidoId: { userId, microContenidoId: mid } },
+      });
+      if (yaComprado) return res.status(409).json({ error: 'Ya tienes este contenido' });
+      await prisma.$transaction([
+        prisma.compraMicroContenido.create({
+          data: { microContenidoId: mid, userId, monto: 0, comisionPlataforma: 0, pagoCreador: 0, estado: 'completada' },
+        }),
+        prisma.microContenido.update({ where: { id: mid }, data: { ventas: { increment: 1 } } }),
+      ]);
+      return res.json({ gratis: true });
+    }
 
     const yaComprado = await prisma.compraMicroContenido.findUnique({
       where: { userId_microContenidoId: { userId, microContenidoId: mid } },
@@ -408,7 +427,21 @@ export const crearOrdenEbook = async (req, res) => {
     const ebook = await prisma.miniEbook.findUnique({ where: { id: eid } });
     if (!ebook) return res.status(404).json({ error: 'Mini-ebook no encontrado' });
     if (ebook.status !== 'activo') return res.status(400).json({ error: 'Ebook no disponible' });
-    if ((ebook.precio ?? 0) === 0) return res.status(400).json({ error: 'Usa el endpoint de acceso gratuito' });
+
+    // Acceso gratuito: registrar directamente sin Flow
+    if ((ebook.precio ?? 0) === 0) {
+      const yaComprado = await prisma.compraMiniEbook.findUnique({
+        where: { userId_miniEbookId: { userId, miniEbookId: eid } },
+      });
+      if (yaComprado) return res.status(409).json({ error: 'Ya tienes este ebook' });
+      await prisma.$transaction([
+        prisma.compraMiniEbook.create({
+          data: { miniEbookId: eid, userId, monto: 0, comisionPlataforma: 0, pagoCreador: 0, estado: 'completada', downloadUrl: ebook.epubUrl || ebook.pdfUrl || null },
+        }),
+        prisma.miniEbook.update({ where: { id: eid }, data: { ventas: { increment: 1 } } }),
+      ]);
+      return res.json({ gratis: true });
+    }
 
     const yaComprado = await prisma.compraMiniEbook.findUnique({
       where: { userId_miniEbookId: { userId, miniEbookId: eid } },
