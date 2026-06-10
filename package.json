@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "seed": "node scripts/seed-microcontenidos.js",
+    "seed:cursos": "node scripts/seed-cursos-iniciales.js",
     "seed:check": "node -e \"import('./scripts/seed-microcontenidos.js').catch(e => { console.error(e); process.exit(1); })\""
   },
   "dependencies": {
