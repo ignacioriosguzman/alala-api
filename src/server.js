@@ -1,6 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import path from "path";
@@ -19,6 +21,10 @@ process.on('unhandledRejection', (reason) => {
   console.error('[FATAL] Promesa rechazada no capturada:', reason);
   process.exit(1);
 });
+
+import { validarEnv } from "./config/env.js";
+validarEnv();
+
 import prisma from "./lib/prisma.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import usuariosRoutes from "./modules/usuarios/usuarios.routes.js";
@@ -52,17 +58,13 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 import { verificarConexionSMTP } from "./services/email.service.js";
 import { limpiarTokensExpirados } from "./modules/auth/auth.service.js";
 
-dotenv.config();
-
-// Validar variables de entorno críticas antes de arrancar
-const REQUIRED_ENV = ['JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'DATABASE_URL'];
-const missingEnv = REQUIRED_ENV.filter(v => !process.env[v]);
-if (missingEnv.length) {
-  console.error('[FATAL] Variables de entorno faltantes:', missingEnv.join(', '));
-  process.exit(1);
-}
+// Validaciones adicionales de entorno (ya validadas en env.js)
 if ((process.env.JWT_SECRET || '').length < 32) {
   console.error('[FATAL] JWT_SECRET debe tener al menos 32 caracteres.');
+  process.exit(1);
+}
+if ((process.env.REFRESH_TOKEN_SECRET || '').length < 32) {
+  console.error('[FATAL] REFRESH_TOKEN_SECRET debe tener al menos 32 caracteres.');
   process.exit(1);
 }
 
@@ -187,6 +189,11 @@ app.use("/api/v1", v1);
 
 // Sitemap sigue accesible en raíz para bots
 app.use("/", sitemapRoutes);
+
+// ── 404 ────────────────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
+});
 
 // ── Middleware global de errores (siempre al final) ────────────────
 app.use(errorHandler);

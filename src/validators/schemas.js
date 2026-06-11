@@ -32,6 +32,16 @@ export const forgotPasswordSchema = z.object({
   email: str.email("Email inválido"),
 });
 
+export const reenviarSchema = z.object({
+  email: str.email("Email inválido"),
+});
+
+export const resetPasswordSchema = z.object({
+  id: z.union([str, int]).transform((v) => Number(v)),
+  token: str.min(1, "Token requerido"),
+  password: str.min(8, "La contraseña debe tener al menos 8 caracteres").max(100),
+});
+
 // ═══════════════════════════════════════════════════════════
 // CURSOS
 // ═══════════════════════════════════════════════════════════

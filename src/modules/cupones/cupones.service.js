@@ -20,6 +20,17 @@ export const crearCupon = async (data, creatorId) => {
   const contenidoId = data.contenidoId ? Number(data.contenidoId) : null;
   const fechaExpiracion = data.fechaExpiracion ? new Date(data.fechaExpiracion) : null;
 
+  if (contenidoId) {
+    const contenido = await prisma.contenidoDigital.findUnique({
+      where: { id: contenidoId },
+      select: { creatorId: true },
+    });
+    if (!contenido) throw new Error("Contenido no encontrado");
+    if (contenido.creatorId !== Number(creatorId)) {
+      throw new Error("No puedes crear cupones para contenido que no te pertenece");
+    }
+  }
+
   const existente = await prisma.cupon.findUnique({ where: { codigo } });
   if (existente) throw new Error("Ya existe un cupón con ese código");
 

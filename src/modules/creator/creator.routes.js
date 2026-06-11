@@ -1,6 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { authGuard } from "../../middlewares/authGuard.js";
+import { roleGuard } from "../../middlewares/roleGuard.js";
 import {
   perfil, crearPerfil, editarPerfil,
   link, visita, stats,
@@ -17,18 +18,20 @@ const visitaLimiter = rateLimit({
   message: { error: "Demasiadas visitas registradas. Intenta más tarde." },
 });
 
-// ── Perfil de creador (requiere auth) ─────────────────────────────────────────
-router.get("/profile",  authGuard, perfil);
-router.post("/profile", authGuard, crearPerfil);
-router.put("/profile",  authGuard, editarPerfil);
+const guard = [authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN")];
 
-// ── Link de referido (requiere auth) ─────────────────────────────────────────
-router.get("/link",          authGuard, link);
+// ── Perfil de creador (requiere auth + rol) ──────────────────────────────────
+router.get("/profile",  ...guard, perfil);
+router.post("/profile", ...guard, crearPerfil);
+router.put("/profile",  ...guard, editarPerfil);
+
+// ── Link de referido ─────────────────────────────────────────────────────────
+router.get("/link",          ...guard, link);
 router.post("/link/visit", visitaLimiter, visita);   // público — registra visita
-router.get("/stats",         authGuard, stats);
+router.get("/stats",         ...guard, stats);
 
-// ── Ingresos y conversión (requiere auth) ────────────────────────────────────
-router.get("/earnings/monthly", authGuard, earningsMonthly);
-router.get("/conversion",       authGuard, conversion);
+// ── Ingresos y conversión (requiere auth + rol) ──────────────────────────────
+router.get("/earnings/monthly", ...guard, earningsMonthly);
+router.get("/conversion",       ...guard, conversion);
 
 export default router;

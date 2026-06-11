@@ -57,6 +57,10 @@ export const actualizar = async (req, res) => {
     if (!isAdmin && req.user.id !== id) {
       return res.status(403).json({ error: 'Solo puedes modificar tu propio perfil' });
     }
+    // Validar que no se intente modificar el password por este endpoint
+    if (req.body.password !== undefined) {
+      return res.status(400).json({ error: 'No puedes cambiar la contraseña por este endpoint. Usa /auth/reset-password' });
+    }
     const data = await updateUsuario(id, req.body, isAdmin);
     res.json(data);
   } catch (error) {

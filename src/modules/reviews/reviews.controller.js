@@ -1,3 +1,4 @@
+import { sanitizeText } from "../../utils/sanitize.js";
 import { createReview, getReviewsByCurso, getPromedioReviews } from "./reviews.service.js";
 
 const handleError = (error, res) => {
@@ -11,6 +12,7 @@ const handleError = (error, res) => {
 export const crear = async (req, res) => {
   try {
     const data = { ...req.body, userId: req.user.id };
+    if (data.comentario) data.comentario = sanitizeText(data.comentario);
     const review = await createReview(data);
     res.status(201).json(review);
   } catch (error) {

@@ -21,7 +21,7 @@ export const createReview = async (data) => {
   const rating = Number(data.rating);
   if (!rating || rating < 1 || rating > 5) throw new Error("La calificación debe ser entre 1 y 5");
 
-  return prisma.review.create({
+  const review = await prisma.review.create({
     data: {
       cursoId,
       userId,
@@ -32,6 +32,21 @@ export const createReview = async (data) => {
       user: { select: { id: true, nombre: true } },
     },
   });
+
+  // Recalcular rating promedio del curso
+  const todas = await prisma.review.findMany({
+    where: { cursoId },
+    select: { rating: true },
+  });
+  const total = todas.length;
+  const promedio = total > 0 ? todas.reduce((sum, r) => sum + r.rating, 0) / total : 0;
+
+  await prisma.course.update({
+    where: { id: cursoId },
+    data: { rating: parseFloat(promedio.toFixed(2)), reviews: total },
+  });
+
+  return review;
 };
 
 export const getReviewsByCurso = async (cursoId) => {

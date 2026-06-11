@@ -13,6 +13,15 @@ const STATIC_URLS = [
   { loc: "/registro.html", priority: "0.5", changefreq: "monthly" },
 ];
 
+function escapeXml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export const generarSitemap = async (req, res) => {
   try {
     const cursos = await prisma.course.findMany({
@@ -41,10 +50,10 @@ export const generarSitemap = async (req, res) => {
 ${urls
   .map(
     (u) => `  <url>
-    <loc>${u.loc}</loc>
-    <lastmod>${u.lastmod}</lastmod>
-    <changefreq>${u.changefreq}</changefreq>
-    <priority>${u.priority}</priority>
+    <loc>${escapeXml(u.loc)}</loc>
+    <lastmod>${escapeXml(u.lastmod)}</lastmod>
+    <changefreq>${escapeXml(u.changefreq)}</changefreq>
+    <priority>${escapeXml(u.priority)}</priority>
   </url>`
   )
   .join("\n")}

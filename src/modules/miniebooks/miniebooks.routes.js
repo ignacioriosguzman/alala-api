@@ -46,7 +46,7 @@ router.get("/estadisticas/mis-stats", authGuard, estadisticas);
 
 // Públicos (dinámicos — van después de las rutas específicas)
 router.get("/", listar);
-router.get("/:id", obtener);
+router.get("/:id", optionalAuth, obtener);
 router.get("/:id/upsell", upsell);
 router.get("/:id/progreso", getProgreso);
 router.get("/:id/resenas", listarResenasCtrl);

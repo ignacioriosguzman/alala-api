@@ -15,12 +15,17 @@ export const smtpStatus = async (req, res) => {
   });
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const enviarConfirmacion = async (req, res) => {
   try {
     const { email, nombre, cursoTitulo, cursoFecha, cursoDireccion, ordenId } = req.body;
 
-    if (!email || !nombre || !cursoTitulo) {
-      return res.status(400).json({ error: "email, nombre y cursoTitulo son requeridos" });
+    if (!email || !EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: "email inválido" });
+    }
+    if (!nombre || !cursoTitulo) {
+      return res.status(400).json({ error: "nombre y cursoTitulo son requeridos" });
     }
 
     const resultado = await enviarEmailConfirmacionCompra({

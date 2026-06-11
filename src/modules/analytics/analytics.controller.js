@@ -16,10 +16,15 @@ export const evento = async (req, res) => {
   try {
     const { tipo, cursoId, metadata } = req.body;
     // userId always from JWT, never from request body
+    // Limitar metadata a 50KB para prevenir abuso de almacenamiento
+    let safeMetadata = metadata;
+    if (metadata && JSON.stringify(metadata).length > 50 * 1024) {
+      return res.status(400).json({ error: 'Metadata excede el límite de 50KB' });
+    }
     const data = {
-      tipo,
+      tipo: String(tipo).slice(0, 100),
       cursoId: cursoId ? Number(cursoId) : undefined,
-      metadata,
+      metadata: safeMetadata,
       userId: req.user?.id ?? null,
     };
     const result = await registrarEvento(data);

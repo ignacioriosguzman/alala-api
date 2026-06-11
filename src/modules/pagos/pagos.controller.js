@@ -25,6 +25,18 @@ export const crearOrden = async (req, res) => {
     });
     if (yaMatriculado) return res.status(409).json({ error: 'Ya estás inscrito en este curso' });
 
+    // Prevenir múltiples órdenes pendientes para el mismo curso
+    const ventaPendiente = await prisma.venta.findFirst({
+      where: { userId, courseId: curso.id, estado: 'PENDIENTE' },
+    });
+    if (ventaPendiente) {
+      return res.json({
+        urlPago: `${ventaPendiente.flowData?.url}?token=${ventaPendiente.flowToken}`,
+        token: ventaPendiente.flowToken,
+        commerceOrder: ventaPendiente.flowOrder,
+      });
+    }
+
     // Inscripción gratuita: registrar directamente sin Flow
     if (curso.precio === 0) {
       await prisma.enrollment.create({ data: { userId, courseId: curso.id } });
@@ -125,9 +137,12 @@ export const confirmarPago = async (req, res) => {
           }),
         ]);
       } else {
+        let nuevoEstado = 'pendiente';
+        if (estado === 'RECHAZADO') nuevoEstado = 'rechazada';
+        else if (estado === 'ANULADO') nuevoEstado = 'anulada';
         await prisma.compraContenido.update({
           where: { id: compraContenido.id },
-          data: { estado: estado === 'RECHAZADO' ? 'rechazada' : 'pendiente' },
+          data: { estado: nuevoEstado },
         });
       }
       return res.status(200).send('');
@@ -148,9 +163,12 @@ export const confirmarPago = async (req, res) => {
           }),
         ]);
       } else {
+        let nuevoEstado = 'pendiente';
+        if (estado === 'RECHAZADO') nuevoEstado = 'rechazada';
+        else if (estado === 'ANULADO') nuevoEstado = 'anulada';
         await prisma.compraMicroContenido.update({
           where: { id: compraMicro.id },
-          data: { estado: estado === 'RECHAZADO' ? 'rechazada' : 'pendiente' },
+          data: { estado: nuevoEstado },
         });
       }
       return res.status(200).send('');
@@ -172,9 +190,12 @@ export const confirmarPago = async (req, res) => {
           }),
         ]);
       } else {
+        let nuevoEstado = 'pendiente';
+        if (estado === 'RECHAZADO') nuevoEstado = 'rechazada';
+        else if (estado === 'ANULADO') nuevoEstado = 'anulada';
         await prisma.compraMiniEbook.update({
           where: { id: compraEbook.id },
-          data: { estado: estado === 'RECHAZADO' ? 'rechazada' : 'pendiente' },
+          data: { estado: nuevoEstado },
         });
       }
       return res.status(200).send('');
@@ -279,9 +300,9 @@ export const crearOrdenContenido = async (req, res) => {
     if (!contenido) return res.status(404).json({ error: 'Contenido no encontrado' });
     if (contenido.status !== 'activo') return res.status(400).json({ error: 'Contenido no disponible' });
 
+    const monto = contenido.precioOferta ?? contenido.precio;
     // Compra gratuita: registrar directamente sin Flow
-    if (contenido.precio === 0) {
-      const monto = 0;
+    if (monto === 0) {
       const comisionPlataforma = 0;
       const pagoCreador = 0;
       const yaComprado = await prisma.compraContenido.findUnique({
@@ -304,10 +325,10 @@ export const crearOrdenContenido = async (req, res) => {
       return res.status(409).json({ error: 'Ya tienes este contenido' });
     }
 
+
     const usuario = await prisma.user.findUnique({ where: { id: userId } });
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    const monto = contenido.precioOferta ?? contenido.precio;
     const commerceOrder = `ALALA-CONT-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
 
     const flowData = await crearPago({
@@ -376,6 +397,7 @@ export const crearOrdenMicro = async (req, res) => {
     if (yaComprado && yaComprado.estado === 'completada') {
       return res.status(409).json({ error: 'Ya tienes este contenido' });
     }
+
 
     const usuario = await prisma.user.findUnique({ where: { id: userId } });
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -450,6 +472,7 @@ export const crearOrdenEbook = async (req, res) => {
       return res.status(409).json({ error: 'Ya tienes este ebook' });
     }
 
+
     const usuario = await prisma.user.findUnique({ where: { id: userId } });
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -492,18 +515,37 @@ export const estadoPago = async (req, res) => {
   try {
     const { token } = req.params;
     if (!token) return res.status(400).json({ error: 'token requerido' });
-    const venta = await prisma.venta.findUnique({
-      where: { flowToken: token },
-      select: { estado: true, flowOrder: true, monto: true, courseId: true, userId: true },
-    });
-    if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
+
+    // Buscar en todas las tablas de compra
+    const [venta, compraContenido, compraMicro, compraEbook] = await Promise.all([
+      prisma.venta.findUnique({
+        where: { flowToken: token },
+        select: { estado: true, flowOrder: true, monto: true, courseId: true, userId: true },
+      }),
+      prisma.compraContenido.findFirst({
+        where: { flowToken: token },
+        select: { estado: true, flowOrder: true, monto: true, contenidoId: true, userId: true },
+      }),
+      prisma.compraMicroContenido.findFirst({
+        where: { flowToken: token },
+        select: { estado: true, flowOrder: true, monto: true, microContenidoId: true, userId: true },
+      }),
+      prisma.compraMiniEbook.findFirst({
+        where: { flowToken: token },
+        select: { estado: true, flowOrder: true, monto: true, miniEbookId: true, userId: true },
+      }),
+    ]);
+
+    const registro = venta || compraContenido || compraMicro || compraEbook;
+    if (!registro) return res.status(404).json({ error: 'Venta no encontrada' });
+
     // IDOR fix: solo el comprador, admin o el instructor del curso pueden ver el estado
     const isAdmin = req.user.role === 'ADMIN';
-    const isOwner = venta.userId === req.user.id;
+    const isOwner = registro.userId === req.user.id;
     if (!isAdmin && !isOwner) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
-    res.json(venta);
+    res.json(registro);
   } catch (err) {
     res.status(500).json({ error: 'Error consultando estado' });
   }

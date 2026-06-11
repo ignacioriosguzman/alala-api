@@ -114,7 +114,10 @@ export const logout = async (req, res) => {
   try {
     const { refreshToken } = req.body;
     if (refreshToken) {
-      await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
+      // Solo borrar el token si pertenece al usuario autenticado (previene IDOR)
+      await prisma.refreshToken.deleteMany({
+        where: { token: refreshToken, userId: req.user.id },
+      });
     }
     res.json({ message: 'Sesión cerrada' });
   } catch {

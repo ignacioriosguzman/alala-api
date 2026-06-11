@@ -6,7 +6,8 @@ import { generateAccessToken, generateRefreshToken } from "../../utils/tokens.js
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validarDatosUsuario({ nombre, email, password }) {
-  if (!nombre?.trim()) throw new Error("El nombre es requerido");
+  const nombreTrim = nombre?.trim();
+  if (!nombreTrim || nombreTrim.length < 2) throw new Error("El nombre es requerido y debe tener al menos 2 caracteres");
   if (!email || !EMAIL_RE.test(email)) throw new Error("El correo electrónico no es válido");
   if (!password || password.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres");
 }
@@ -108,6 +109,12 @@ export const refreshAccessToken = async (refreshToken) => {
   }
   const stored = await prisma.refreshToken.findUnique({ where: { token: refreshToken } });
   if (!stored) return null;
+  // Verificar expiración del token almacenado
+  if (stored.expiresAt && new Date() > stored.expiresAt) {
+    console.warn(`[auth] refreshAccessToken bloqueado: token expirado en DB para usuario ${stored.userId}`);
+    await prisma.refreshToken.delete({ where: { id: stored.id } }).catch(() => {});
+    return null;
+  }
   const user = await prisma.user.findUnique({ where: { id: stored.userId } });
   if (!user || !user.activo) {
     console.warn(`[auth] refreshAccessToken bloqueado: usuario ${stored.userId} ${!user ? 'no existe' : 'inactivo'}`);
@@ -182,6 +189,7 @@ export const resetPassword = async (userId, token, newPassword) => {
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("Usuario no encontrado");
+  if (!user.activo) throw new Error("Cuenta deshabilitada. Contacta soporte.");
 
   const secret = process.env.JWT_SECRET + user.password;
   try {

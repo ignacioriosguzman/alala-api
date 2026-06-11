@@ -36,21 +36,34 @@ export const subirArchivoDrive = async (fileBuffer, fileName, mimeType) => {
           media,
           fields: 'id, webViewLink, webContentLink',
         });
-      } else throw e;
+      } else {
+        console.error('[Drive] Error subiendo archivo:', e.message);
+        throw new Error('Error al subir archivo a Google Drive');
+      }
     }
   } else {
-    response = await drive.files.create({
-      requestBody: { name: fileName },
-      media,
-      fields: 'id, webViewLink, webContentLink',
-    });
+    try {
+      response = await drive.files.create({
+        requestBody: { name: fileName },
+        media,
+        fields: 'id, webViewLink, webContentLink',
+      });
+    } catch (e) {
+      console.error('[Drive] Error subiendo archivo:', e.message);
+      throw new Error('Error al subir archivo a Google Drive');
+    }
   }
 
   const fileId = response.data.id;
-  await drive.permissions.create({
-    fileId,
-    requestBody: { role: 'reader', type: 'anyone' },
-  });
+  try {
+    await drive.permissions.create({
+      fileId,
+      requestBody: { role: 'reader', type: 'anyone' },
+    });
+  } catch (e) {
+    console.error('[Drive] Error configurando permisos:', e.message);
+    // No lanzar error para no bloquear si el archivo ya se subió
+  }
 
   return {
     id: fileId,

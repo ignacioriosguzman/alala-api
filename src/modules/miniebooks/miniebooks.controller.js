@@ -54,9 +54,27 @@ export const listar = async (req, res) => {
 export const obtener = async (req, res) => {
   try {
     const ebook = await getEbookById(req.params.id);
-    if (!ebook || ebook.status !== "activo") {
+    if (!ebook) {
       return res.status(404).json({ error: "Mini-ebook no encontrado" });
     }
+    // Permitir que el autor o un admin vea ebooks no activos
+    const isOwner = req.user && ebook.autorId === req.user.id;
+    const isAdmin = req.user?.role === 'ADMIN';
+    if (ebook.status !== "activo" && !isOwner && !isAdmin) {
+      return res.status(404).json({ error: "Mini-ebook no encontrado" });
+    }
+
+    // Si el ebook tiene precio, verificar compra antes de entregar URLs de descarga
+    if ((ebook.precio ?? 0) > 0 && !isOwner && !isAdmin) {
+      const userId = req.user?.id ?? null;
+      const emailInvitado = req.query.email || null;
+      const { comprado } = await verificarCompra(userId, emailInvitado, req.params.id);
+      if (!comprado) {
+        const { epubUrl, pdfUrl, manuscritoHtml, manuscritoTexto, ...preview } = ebook;
+        return res.json({ ...preview, acceso: 'bloqueado' });
+      }
+    }
+
     res.json(ebook);
   } catch (error) {
     handleError(error, res);

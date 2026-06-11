@@ -14,7 +14,7 @@ import {
 } from "./auth.controller.js";
 import { authGuard } from "../../middlewares/authGuard.js";
 import { validate } from "../../middlewares/validate.js";
-import { registerSchema, loginSchema, forgotPasswordSchema } from "../../validators/schemas.js";
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, reenviarSchema } from "../../validators/schemas.js";
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -51,11 +51,11 @@ router.post("/register", registerLimiter, validate(registerSchema), register);
 router.post("/register-instructor", registerLimiter, validate(registerSchema), registrarInstructor);
 router.post("/login", loginLimiter, validate(loginSchema), login);
 router.post("/refresh", generalAuthLimiter, refresh);
-router.post("/logout", generalAuthLimiter, logout);
+router.post("/logout", generalAuthLimiter, authGuard, logout);
 router.post("/forgot-password", forgotLimiter, forgotPassword);
-router.post("/reset-password", generalAuthLimiter, doResetPassword);
+router.post("/reset-password", generalAuthLimiter, validate(resetPasswordSchema), doResetPassword);
 router.get("/confirmar", generalAuthLimiter, confirmar);
-router.post("/reenviar-confirmacion", generalAuthLimiter, reenviar);
+router.post("/reenviar-confirmacion", generalAuthLimiter, validate(reenviarSchema), reenviar);
 router.get("/me", authGuard, me);
 
 export default router;

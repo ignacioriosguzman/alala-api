@@ -58,14 +58,21 @@ export const porTipo = async (req, res) => {
 export const obtener = async (req, res) => {
   try {
     const micro = await getMicroById(req.params.id);
-    if (!micro || !micro.publicado) {
+    if (!micro) {
+      return res.status(404).json({ error: "MicroContenido no encontrado" });
+    }
+    // Permitir que el autor o un admin vea micros no publicados
+    const isOwner = req.user && micro.autorId === req.user.id;
+    const isAdmin = req.user?.role === 'ADMIN';
+    if (!micro.publicado && !isOwner && !isAdmin) {
       return res.status(404).json({ error: "MicroContenido no encontrado" });
     }
 
     // Si el microcontenido tiene precio, verificar compra antes de entregar el contenido completo
-    if ((micro.precio ?? 0) > 0) {
+    if ((micro.precio ?? 0) > 0 && !isOwner && !isAdmin) {
       const userId = req.user?.id ?? null;
-      const { comprado } = await verificarCompraMicro(userId, null, req.params.id);
+      const emailInvitado = req.query.email || null;
+      const { comprado } = await verificarCompraMicro(userId, emailInvitado, req.params.id);
       if (!comprado) {
         const { contenido, ...preview } = micro;
         return res.json({ ...preview, contenido: null, acceso: 'bloqueado' });

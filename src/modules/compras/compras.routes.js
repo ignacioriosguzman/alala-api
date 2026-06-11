@@ -32,7 +32,6 @@ const checkoutInvitadoLimiter = rateLimit({
   max: 10, // máximo 10 compras invitado por IP/hora
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
   message: { error: 'Demasiadas compras desde esta red. Intenta más tarde.' },
 });
 

@@ -15,11 +15,15 @@ const DEFAULT_FLOW_IPS = [
 ];
 
 function getClientIp(req) {
+  // Con trust proxy activo, req.ip ya es la IP real del cliente más cercano al proxy
+  if (req.ip) return req.ip;
   const forwarded = req.headers["x-forwarded-for"];
   if (forwarded) {
-    return forwarded.split(",")[0].trim();
+    // Tomar el último hop (más cercano al servidor) en vez del primero
+    const hops = forwarded.split(",").map((s) => s.trim()).filter(Boolean);
+    return hops[hops.length - 1] || "";
   }
-  return req.ip || req.connection?.remoteAddress || "";
+  return req.connection?.remoteAddress || "";
 }
 
 export const webhookIpGuard = (req, res, next) => {

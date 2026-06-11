@@ -1,3 +1,4 @@
+import prisma from "../../lib/prisma.js";
 import { sanitizeObject } from "../../utils/sanitize.js";
 import {
   createContenido,
@@ -39,9 +40,32 @@ export const catalogo = async (req, res) => {
 export const obtener = async (req, res) => {
   try {
     const contenido = await getContenidoById(req.params.id);
-    if (!contenido || contenido.status !== "activo") {
+    if (!contenido) {
       return res.status(404).json({ error: "Contenido no encontrado" });
     }
+    // Permitir que el creador o un admin vea contenidos no activos
+    const isOwner = req.user && contenido.creatorId === req.user.id;
+    const isAdmin = req.user?.role === 'ADMIN';
+    if (contenido.status !== "activo" && !isOwner && !isAdmin) {
+      return res.status(404).json({ error: "Contenido no encontrado" });
+    }
+
+    // Si el contenido tiene precio, verificar compra antes de entregar URL de descarga
+    const monto = contenido.precioOferta ?? contenido.precio;
+    if ((monto ?? 0) > 0 && !isOwner && !isAdmin) {
+      const userId = req.user?.id ?? null;
+      const emailInvitado = req.query.email || null;
+      const compra = await prisma.compraContenido.findUnique({
+        where: userId
+          ? { userId_contenidoId: { userId: Number(userId), contenidoId: Number(req.params.id) } }
+          : { emailInvitado_contenidoId: { emailInvitado, contenidoId: Number(req.params.id) } },
+      });
+      if (!compra || compra.estado !== 'completada') {
+        const { pdfUrl, ...preview } = contenido;
+        return res.json({ ...preview, acceso: 'bloqueado' });
+      }
+    }
+
     res.json(contenido);
   } catch (error) {
     handleError(error, res);

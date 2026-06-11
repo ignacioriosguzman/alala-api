@@ -4,6 +4,12 @@
  * y devuelve un mensaje genérico al cliente.
  */
 export const errorHandler = (err, req, res, next) => {
+  // JSON malformado (SyntaxError de body-parser)
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('[ERROR] JSON malformado:', err.message);
+    return res.status(400).json({ error: 'JSON malformado en el body' });
+  }
+
   // Log interno completo para debugging
   console.error('[ERROR]', err.name || 'Error', '-', err.message);
   if (process.env.NODE_ENV === 'development') {

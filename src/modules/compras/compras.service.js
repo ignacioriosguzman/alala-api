@@ -145,10 +145,21 @@ export const comprarContenidoInvitado = async (email, nombre, contenidoId, cupon
   if (contenido.status !== "activo") throw new Error("Contenido no disponible");
 
   let monto = contenido.precioOferta ?? contenido.precio;
+  if (monto > 0 && !cuponCodigo) throw new Error("Este contenido tiene un costo. Usa el flujo de pago.");
+
   let cuponId = null;
 
   if (cuponCodigo) {
     const validacion = await validarCupon(cuponCodigo, contenidoId);
+    // Validar que el cupón pertenezca al creador del contenido
+    const cuponRecord = await prisma.cupon.findUnique({
+      where: { id: validacion.cuponId },
+      select: { creatorId: true, contenidoId: true },
+    });
+    if (!cuponRecord) throw new Error("Cupón no encontrado");
+    if (cuponRecord.creatorId !== contenido.creatorId) {
+      throw new Error("Cupón no válido para este contenido");
+    }
     cuponId = validacion.cuponId;
     monto = Math.round(monto * (1 - validacion.descuentoPct / 100));
   }
