@@ -1,18 +1,16 @@
 {
   "name": "alala-api",
   "version": "1.0.0",
+  "description": "API REST de ALALA — Plataforma cultural para aprender, crear y compartir.",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
+    "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "start": "prisma db push --skip-generate && node src/server.js",
-    "build": "prisma generate",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
-    "prisma:push": "prisma db push",
-    "seed": "node scripts/seed-microcontenidos.js",
-    "seed:cursos": "node scripts/seed-cursos-iniciales.js",
-    "seed:check": "node -e \"import('./scripts/seed-microcontenidos.js').catch(e => { console.error(e); process.exit(1); })\""
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "node scripts/seed-cursos-iniciales.js",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^5.13.0",
@@ -35,5 +33,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
