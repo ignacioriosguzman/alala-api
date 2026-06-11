@@ -82,6 +82,7 @@ model User {
   @@index([email])
   @@index([role])
   @@index([activo])
+  @@index([verificado])
 }
 
 model SiteConfig {
@@ -106,6 +107,7 @@ model PagoCreador {
 
   @@index([creatorId])
   @@index([createdAt])
+  @@index([adminId])
 }
 
 model SolicitudRetiro {
@@ -126,6 +128,7 @@ model SolicitudRetiro {
   @@index([userId])
   @@index([estado])
   @@index([createdAt])
+  @@index([adminId])
 }
 
 model CreatorProfile {
@@ -312,6 +315,7 @@ model Mensaje {
   @@index([remitenteId])
   @@index([destinatarioId])
   @@index([leido])
+  @@index([createdAt])
 }
 
 model ContenidoDigital {
@@ -352,6 +356,7 @@ model ContenidoDigital {
   @@index([categoria])
   @@index([creatorId])
   @@index([status])
+  @@index([createdAt])
 }
 
 model CompraContenido {
@@ -388,6 +393,7 @@ model ResenaContenido {
 
   @@unique([userId, contenidoId])
   @@index([contenidoId])
+  @@index([userId])
 }
 
 model Cupon {
@@ -426,6 +432,7 @@ model CompraInvitado {
 
   @@index([email])
   @@index([contenidoId])
+  @@index([estado])
 }
 
 model ProgresoLectura {
@@ -441,6 +448,7 @@ model ProgresoLectura {
   @@unique([userId, contenidoId])
   @@unique([emailInvitado, contenidoId])
   @@index([contenidoId])
+  @@index([userId])
 }
 
 model FavoriteContenido {
@@ -712,6 +720,7 @@ model ArticleComment {
   @@index([articuloId])
   @@index([userId])
   @@index([aprobado])
+  @@index([createdAt])
 }
 
 model ArticleFavorite {
