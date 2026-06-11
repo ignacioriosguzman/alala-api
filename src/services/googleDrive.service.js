@@ -17,7 +17,7 @@ export const subirArchivoDrive = async (fileBuffer, fileName, mimeType) => {
   const auth = getAuth();
   const drive = google.drive({ version: 'v3', auth });
 
-  const media = { mimeType, body: Readable.from(fileBuffer) };
+  const makeMedia = () => ({ mimeType, body: Readable.from(fileBuffer) });
 
   // Intentar subir a la carpeta configurada; si falla (carpeta no compartida), subir al root
   let response;
@@ -25,17 +25,22 @@ export const subirArchivoDrive = async (fileBuffer, fileName, mimeType) => {
     try {
       response = await drive.files.create({
         requestBody: { name: fileName, parents: [FOLDER_ID] },
-        media,
+        media: makeMedia(),
         fields: 'id, webViewLink, webContentLink',
       });
     } catch (e) {
       if (e?.response?.data?.error?.code === 404 || e?.response?.data?.error?.code === 403) {
         console.warn(`[Drive] Carpeta ${FOLDER_ID} inaccesible (${e.response.data.error.code}), subiendo al root del service account.`);
-        response = await drive.files.create({
-          requestBody: { name: fileName },
-          media,
-          fields: 'id, webViewLink, webContentLink',
-        });
+        try {
+          response = await drive.files.create({
+            requestBody: { name: fileName },
+            media: makeMedia(),
+            fields: 'id, webViewLink, webContentLink',
+          });
+        } catch (e2) {
+          console.error('[Drive] Error subiendo al root:', e2.message);
+          throw new Error('Error al subir archivo a Google Drive');
+        }
       } else {
         console.error('[Drive] Error subiendo archivo:', e.message);
         throw new Error('Error al subir archivo a Google Drive');
@@ -45,7 +50,7 @@ export const subirArchivoDrive = async (fileBuffer, fileName, mimeType) => {
     try {
       response = await drive.files.create({
         requestBody: { name: fileName },
-        media,
+        media: makeMedia(),
         fields: 'id, webViewLink, webContentLink',
       });
     } catch (e) {

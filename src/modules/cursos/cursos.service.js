@@ -40,7 +40,7 @@ export const getCursos = async ({ limit, offset } = {}) => {
   ]);
 
   // Normalizar ContenidoDigital con la misma estructura que Course
-  const contenidosComo = contenidos.map(c => ({
+  const contenidosComo = (contenidos ?? []).map(c => ({
     id: c.id,
     titulo: c.titulo,
     descripcion: c.descripcion,
@@ -62,7 +62,7 @@ export const getCursos = async ({ limit, offset } = {}) => {
     updatedAt: c.updatedAt,
   }));
 
-  const cursosConTipo = courses.map(c => ({ ...c, _tipo: "curso" }));
+  const cursosConTipo = (courses ?? []).map(c => ({ ...c, _tipo: "curso" }));
   const todos = [...cursosConTipo, ...contenidosComo];
   if (limit == null) return todos;
   const off = Number(offset) || 0;

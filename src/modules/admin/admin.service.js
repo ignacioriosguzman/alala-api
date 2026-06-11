@@ -156,7 +156,7 @@ export const getFinanzas = async () => {
       micro:     { monto: agMicro._sum.monto ?? 0,     ventas: agMicro._count ?? 0 },
       ebooks:    { monto: agEbooks._sum.monto ?? 0,    ventas: agEbooks._count ?? 0 },
     },
-    ventasPorCategoria: ventasPorCategoria.map(v => ({ categoria: v.categoria, ventas: v._sum.ventas ?? 0 })),
+    ventasPorCategoria: (ventasPorCategoria ?? []).map(v => ({ categoria: v.categoria, ventas: v._sum.ventas ?? 0 })),
     rankingCreadores,
   };
 };

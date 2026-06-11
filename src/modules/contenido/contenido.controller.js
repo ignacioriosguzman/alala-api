@@ -55,12 +55,19 @@ export const obtener = async (req, res) => {
     if ((monto ?? 0) > 0 && !isOwner && !isAdmin) {
       const userId = req.user?.id ?? null;
       const emailInvitado = req.query.email || null;
-      const compra = await prisma.compraContenido.findUnique({
-        where: userId
-          ? { userId_contenidoId: { userId: Number(userId), contenidoId: Number(req.params.id) } }
-          : { emailInvitado_contenidoId: { emailInvitado, contenidoId: Number(req.params.id) } },
-      });
-      if (!compra || compra.estado !== 'completada') {
+      let tieneAcceso = false;
+      if (userId) {
+        const compra = await prisma.compraContenido.findUnique({
+          where: { userId_contenidoId: { userId: Number(userId), contenidoId: Number(req.params.id) } },
+        });
+        tieneAcceso = compra?.estado === 'completada';
+      } else if (emailInvitado) {
+        const compra = await prisma.compraInvitado.findFirst({
+          where: { email: emailInvitado.toLowerCase(), contenidoId: Number(req.params.id), estado: 'completada' },
+        });
+        tieneAcceso = !!compra;
+      }
+      if (!tieneAcceso) {
         const { pdfUrl, ...preview } = contenido;
         return res.json({ ...preview, acceso: 'bloqueado' });
       }
