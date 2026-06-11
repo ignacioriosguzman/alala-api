@@ -14,8 +14,8 @@ const sanitize = (data) => {
   for (const key of CONTENIDO_FIELDS) {
     if (data[key] !== undefined) {
       if (["precio", "precioOferta", "paginas"].includes(key)) {
-        const n = Number(data[key]);
-        if (!isNaN(n)) clean[key] = n;
+        if (data[key] === null && key !== "precio") { clean[key] = null; }
+        else { const n = Number(data[key]); if (!isNaN(n)) clean[key] = n; }
       } else if (["tamanoMb", "comisionPct"].includes(key)) {
         const val = parseFloat(data[key]);
         if (!isNaN(val)) clean[key] = val;
@@ -100,9 +100,14 @@ export const updateContenido = async (id, data, creatorId) => {
   if (!existing) throw new Error("Contenido no encontrado");
   if (existing.creatorId !== Number(creatorId)) throw new Error("No autorizado");
 
+  const clean = sanitize(data);
+  // Prisma requires { set: [...] } syntax for scalar list fields in update operations
+  if (Array.isArray(clean.palabrasClave)) clean.palabrasClave = { set: clean.palabrasClave };
+  if (Array.isArray(clean.previewUrls)) clean.previewUrls = { set: clean.previewUrls };
+
   return prisma.contenidoDigital.update({
     where: { id: Number(id) },
-    data: sanitize(data),
+    data: clean,
   });
 };
 

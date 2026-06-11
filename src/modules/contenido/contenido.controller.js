@@ -13,7 +13,7 @@ import {
 
 const handleError = (error, res) => {
   if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
-    console.error('[Contenido] Error de Prisma:', error.message);
+    console.error('[Contenido] Error de Prisma:', error.code, error.message, error.meta ?? '');
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
   res.status(400).json({ error: error.message });

@@ -106,9 +106,11 @@ export const updateEbook = async (id, data, autorId) => {
     throw new Error(`Plantilla inválida. Usa: ${VALID_TEMPLATES.join(", ")}`);
   }
 
+  const clean = sanitize(data);
+  if (Array.isArray(clean.palabrasClave)) clean.palabrasClave = { set: clean.palabrasClave };
   return prisma.miniEbook.update({
     where: { id: Number(id) },
-    data: sanitize(data),
+    data: clean,
   });
 };
 

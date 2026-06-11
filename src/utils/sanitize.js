@@ -5,14 +5,16 @@
  * Protege contra:
  * - Tags HTML: <script>, <img onerror=...>, etc.
  * - Atributos con event handlers: onerror, onload, onclick, etc.
- * - URLs maliciosas: javascript:, data:, vbscript:
+ * - URLs maliciosas: javascript:, vbscript: (data: se permite solo para image/* y application/pdf)
  * - Comillas y backticks que rompen atributos HTML
  * - Entidades HTML numéricas/hexadecimales
  *
  * No requiere dependencias externas.
  */
 
-const DANGEROUS_PROTOCOLS = /^(javascript|data|vbscript|file):/i;
+const DANGEROUS_PROTOCOLS = /^(javascript|vbscript|file):/i;
+// data: URLs are only allowed for safe image/PDF MIME types from own backend
+const SAFE_DATA_URL = /^data:(image\/(jpeg|png|webp|gif|svg\+xml)|application\/pdf);base64,/i;
 const EVENT_HANDLER_ATTR = /^on\w+$/i;
 
 /**
@@ -38,6 +40,10 @@ function sanitizeUrl(url) {
   if (url == null) return url;
   if (typeof url !== 'string') return url;
   const trimmed = url.trim();
+  // Allow safe data: URLs (own-backend image/PDF uploads)
+  if (trimmed.startsWith('data:')) {
+    return SAFE_DATA_URL.test(trimmed) ? trimmed : '#blocked';
+  }
   if (DANGEROUS_PROTOCOLS.test(trimmed)) {
     return '#blocked';
   }
