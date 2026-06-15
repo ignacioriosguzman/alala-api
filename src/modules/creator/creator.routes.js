@@ -34,4 +34,10 @@ router.get("/stats",         ...guard, stats);
 router.get("/earnings/monthly", ...guard, earningsMonthly);
 router.get("/conversion",       ...guard, conversion);
 
+// ── Aliases para /profile/edit y /settings ───────────────────────────────────
+router.get("/profile/edit", ...guard, perfil);
+router.put("/profile/edit", ...guard, editarPerfil);
+router.get("/settings",     ...guard, perfil);
+router.put("/settings",     ...guard, editarPerfil);
+
 export default router;
