@@ -62,6 +62,7 @@ export const portada = async (req, res) => {
     const buf = Buffer.from(b64, 'base64');
     res.set('Content-Type', mime);
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
     res.send(buf);
   } catch (error) {
     handleError(error, res);
