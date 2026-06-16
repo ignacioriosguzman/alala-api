@@ -7,6 +7,7 @@ import {
   crear,
   catalogo,
   obtener,
+  portada,
   misContenidos,
   editar,
   cambiarEstado,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.post("/", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), validate(contenidoSchema), crear);
 router.get("/catalogo", catalogo);
 router.get("/mis-contenidos", authGuard, misContenidos);
+router.get("/:id/portada", portada);
 router.get("/:id", optionalAuth, obtener);
 router.get("/:id/upsell", upsell);
 router.patch("/:id", authGuard, roleGuard("INSTRUCTOR", "CREATOR", "ADMIN"), validate(contenidoSchema.partial()), editar);

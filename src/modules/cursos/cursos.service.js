@@ -29,6 +29,16 @@ const sanitize = (data) => {
   return clean;
 };
 
+const API_BASE = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : 'https://alala-api-production.up.railway.app';
+
+function resolvePortada(portadaUrl, id) {
+  if (!portadaUrl) return null;
+  if (portadaUrl.startsWith('data:image/')) return `${API_BASE}/api/v1/contenido/${id}/portada`;
+  return portadaUrl;
+}
+
 export const getCursos = async ({ limit, offset } = {}) => {
   const [courses, contenidos] = await Promise.all([
     prisma.course.findMany({ orderBy: { createdAt: "desc" } }),
@@ -48,7 +58,7 @@ export const getCursos = async ({ limit, offset } = {}) => {
     instructor: c.creator?.nombre ?? "Creador ALALA",
     categoria: c.categoria,
     precio: c.precioOferta ?? c.precio,
-    imagen: c.portadaUrl ?? null,
+    imagen: resolvePortada(c.portadaUrl, c.id),
     modalidad: "online",
     nivel: c.nivel ?? "todos",
     duracion: null,
@@ -89,7 +99,7 @@ export const getCurso = async (id) => {
     instructor: c.creator?.nombre ?? "Creador ALALA",
     categoria: c.categoria,
     precio: c.precioOferta ?? c.precio,
-    imagen: c.portadaUrl ?? null,
+    imagen: resolvePortada(c.portadaUrl, c.id),
     modalidad: "online",
     nivel: c.nivel ?? "todos",
     duracion: null,

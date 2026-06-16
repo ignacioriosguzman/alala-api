@@ -11,6 +11,12 @@ import {
   upsellRecomendaciones,
 } from "./contenido.service.js";
 
+function resolvePortadaUrl(portadaUrl, id, base) {
+  if (!portadaUrl) return null;
+  if (portadaUrl.startsWith('data:image/')) return `${base}/api/v1/contenido/${id}/portada`;
+  return portadaUrl;
+}
+
 const handleError = (error, res) => {
   if (error.name?.startsWith('Prisma') || error.code?.startsWith('P')) {
     console.error('[Contenido] Error de Prisma:', error.code, error.message, error.meta ?? '');
@@ -31,7 +37,32 @@ export const crear = async (req, res) => {
 export const catalogo = async (req, res) => {
   try {
     const contenidos = await listarCatalogo(req.query);
-    res.json(contenidos);
+    const base = `${req.protocol}://${req.get('host')}`;
+    const result = contenidos.map(c => ({
+      ...c,
+      portadaUrl: resolvePortadaUrl(c.portadaUrl, c.id, base),
+    }));
+    res.json(result);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const portada = async (req, res) => {
+  try {
+    const contenido = await prisma.contenidoDigital.findUnique({
+      where: { id: Number(req.params.id) },
+      select: { portadaUrl: true },
+    });
+    if (!contenido?.portadaUrl?.startsWith('data:image/')) {
+      return res.status(404).end();
+    }
+    const [meta, b64] = contenido.portadaUrl.split(',');
+    const mime = meta.match(/data:(image\/\w+)/)?.[1] || 'image/jpeg';
+    const buf = Buffer.from(b64, 'base64');
+    res.set('Content-Type', mime);
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(buf);
   } catch (error) {
     handleError(error, res);
   }
