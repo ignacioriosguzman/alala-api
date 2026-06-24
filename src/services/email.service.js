@@ -441,6 +441,65 @@ export async function enviarEmailVerificacionUsuario({ email, nombre, confirmUrl
   return send({ to: email, subject: 'Confirma tu cuenta en ALALA', html });
 }
 
+export async function enviarEmailNuevoComentario({ articuloId, autorNombre, autorEmail, contenido }) {
+  const adminEmail = process.env.ADMIN_EMAIL || 'igrigu@gmail.com';
+  const panelUrl = 'https://alala.cl/panel-admin.html';
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 16px">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+        <tr>
+          <td style="background:#D4705A;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+            <p style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.03em">ALALA</p>
+            <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,.75);letter-spacing:.08em;text-transform:uppercase">Nuevo comentario pendiente de aprobación</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#ffffff;padding:40px 40px 36px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb">
+            <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6">
+              Un nuevo comentario fue enviado y está esperando tu aprobación.
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px">
+              <tr>
+                <td style="background:#fef9f8;border-radius:12px;padding:24px 28px;border:1px solid #f8d5cc">
+                  <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#D4705A">Artículo</p>
+                  <p style="margin:0 0 16px;font-size:14px;color:#374151">${esc(articuloId)}</p>
+                  <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#D4705A">Autor</p>
+                  <p style="margin:0 0 16px;font-size:14px;color:#374151">${esc(autorNombre)}${autorEmail ? ' &lt;' + esc(autorEmail) + '&gt;' : ''}</p>
+                  <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#D4705A">Comentario</p>
+                  <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;white-space:pre-wrap">${esc(contenido)}</p>
+                </td>
+              </tr>
+            </table>
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background:#D4705A;border-radius:10px">
+                  <a href="${panelUrl}" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none">
+                    Ir al panel de administración &#8594;
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fafafa;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;padding:20px 40px;text-align:center">
+            <p style="margin:0;font-size:12px;color:#d1d5db">ALALA Chile &nbsp;&#183;&nbsp; <a href="https://alala.cl" style="color:#d1d5db;text-decoration:none">alala.cl</a></p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+  `;
+  return send({ to: adminEmail, subject: `Nuevo comentario pendiente — artículo ${esc(articuloId)}`, html });
+}
+
 export async function enviarEmailRecordatorio({ email, nombre, cursoTitulo, cursoFecha, diasRestantes }) {
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:auto">
