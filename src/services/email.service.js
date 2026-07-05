@@ -441,6 +441,52 @@ export async function enviarEmailVerificacionUsuario({ email, nombre, confirmUrl
   return send({ to: email, subject: 'Confirma tu cuenta en ALALA', html });
 }
 
+export async function enviarEmailBienvenidaNewsletter({ email }) {
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+        <tr>
+          <td style="background:#1a1410;border-radius:16px 16px 0 0;padding:32px 40px;text-align:center">
+            <p style="margin:0;font-size:28px;font-weight:800;color:#fff;letter-spacing:-0.03em">ALALA</p>
+            <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.75);letter-spacing:.05em;text-transform:uppercase">Revista de bienestar, creatividad y cultura</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fff;padding:40px 40px 32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb">
+            <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111">¡Suscripción confirmada!</h1>
+            <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6">
+              Gracias por suscribirte a la revista ALALA. Cada semana recibirás artículos, entrevistas y recursos sobre bienestar, creatividad y cultura. Sin spam, y puedes darte de baja cuando quieras.
+            </p>
+            <table cellpadding="0" cellspacing="0" style="margin:28px 0">
+              <tr>
+                <td style="background:#D4705A;border-radius:10px">
+                  <a href="https://alala.cl" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#fff;text-decoration:none">
+                    Explorar la revista &#8594;
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fafafa;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 16px 16px;padding:24px 40px;text-align:center">
+            <p style="margin:0;font-size:12px;color:#d1d5db">ALALA Chile · <a href="https://alala.cl" style="color:#d1d5db">alala.cl</a></p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+  `;
+  return send({ to: email, subject: 'Suscripción confirmada — Revista ALALA', html });
+}
+
 export async function enviarEmailNuevoComentario({ articuloId, autorNombre, autorEmail, contenido }) {
   const adminEmail = process.env.ADMIN_EMAIL || 'igrigu@gmail.com';
   const panelUrl = 'https://alala.cl/panel-admin.html';
