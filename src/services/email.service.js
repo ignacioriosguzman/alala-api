@@ -488,6 +488,9 @@ export async function enviarEmailBienvenidaNewsletter({ email }) {
 }
 
 export async function enviarEmailNuevoComentario({ articuloId, autorNombre, autorEmail, contenido }) {
+  if (!process.env.ADMIN_EMAIL) {
+    console.warn('[email] ⚠️  ADMIN_EMAIL no definida en Railway — usando remitente de respaldo para notificaciones de comentarios.');
+  }
   const adminEmail = process.env.ADMIN_EMAIL || 'igrigu@gmail.com';
   const panelUrl = 'https://alala.cl/panel-admin.html';
   const html = `

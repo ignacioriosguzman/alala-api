@@ -216,7 +216,10 @@ export const reenviar = async (req, res) => {
 
     if (result) {
       const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(result.verificationToken)}`;
-      enviarEmailVerificacionUsuario({ email: result.user.email, nombre: result.user.nombre, confirmUrl })
+      const enviarVerificacion = result.user.role === 'INSTRUCTOR'
+        ? enviarEmailVerificacionInstructor
+        : enviarEmailVerificacionUsuario;
+      enviarVerificacion({ email: result.user.email, nombre: result.user.nombre, confirmUrl })
         .then(r => {
           if (r?.fallback) {
             console.error('[auth][reenviar] 🚫 SMTP no configurado. Correo de confirmación NO reenviado a:', result.user.email);

@@ -39,17 +39,14 @@ export const crear = async (req, res) => {
   }
 
   try {
-    const [comentario, usuario] = await Promise.all([
-      prisma.articleComment.create({
-        data: { articuloId, userId, contenido: sanitizeHtml(contenido.trim()) },
-      }),
-      prisma.user.findUnique({ where: { id: userId }, select: { nombre: true, email: true } }),
-    ]);
+    const comentario = await prisma.articleComment.create({
+      data: { articuloId, userId, contenido: sanitizeHtml(contenido.trim()) },
+    });
 
     enviarEmailNuevoComentario({
       articuloId,
-      autorNombre: usuario?.nombre || `Usuario ${userId}`,
-      autorEmail: usuario?.email || '',
+      autorNombre: req.user.nombre || `Usuario ${userId}`,
+      autorEmail: req.user.email || '',
       contenido: contenido.trim(),
     }).catch((err) => console.error("[ArticleComments] Error enviando email al admin:", err.message));
 
