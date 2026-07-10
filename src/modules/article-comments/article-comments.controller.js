@@ -1,4 +1,5 @@
 import prisma from "../../lib/prisma.js";
+import { enviarEmailNuevoComentario } from "../../services/email.service.js";
 
 export const listar = async (req, res) => {
   const { articuloId } = req.params;
@@ -41,6 +42,14 @@ export const crear = async (req, res) => {
     const comentario = await prisma.articleComment.create({
       data: { articuloId, userId, contenido: sanitizeHtml(contenido.trim()) },
     });
+
+    enviarEmailNuevoComentario({
+      articuloId,
+      autorNombre: req.user.nombre || `Usuario ${userId}`,
+      autorEmail: req.user.email || '',
+      contenido: contenido.trim(),
+    }).catch((err) => console.error("[ArticleComments] Error enviando email al admin:", err.message));
+
     return res.status(201).json({
       ok: true,
       comentario,

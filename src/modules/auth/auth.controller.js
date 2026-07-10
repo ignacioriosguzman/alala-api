@@ -11,6 +11,7 @@ import {
 import prisma from "../../lib/prisma.js";
 import {
   enviarEmailRecuperacion,
+  enviarEmailVerificacionUsuario,
   enviarEmailVerificacionInstructor,
   enviarEmailBienvenidaInstructor,
 } from "../../services/email.service.js";
@@ -43,9 +44,15 @@ export const register = async (req, res) => {
     });
 
     const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(verificationToken)}`;
-    enviarEmailVerificacionInstructor({ email: user.email, nombre: user.nombre, confirmUrl })
+    enviarEmailVerificacionUsuario({ email: user.email, nombre: user.nombre, confirmUrl })
       .then(r => {
-        if (r?.fallback) console.error('[auth][register] 🚫 SMTP mal configurado. Correo de verificación NO enviado a:', user.email);
+        if (r?.fallback) {
+          console.error('[auth][register] 🚫 SMTP no configurado. Correo de verificación NO enviado a:', user.email);
+        } else if (!r?.ok) {
+          console.error('[auth][register] 🚫 Correo de verificación rechazado para:', user.email, '— Error:', r?.error);
+        } else {
+          console.log('[auth][register] ✓ Correo de verificación enviado a:', user.email);
+        }
       })
       .catch(err => console.error('[auth][register] 🚫 Error SMTP al enviar verificación:', err.message));
   } catch (error) {
@@ -209,9 +216,18 @@ export const reenviar = async (req, res) => {
 
     if (result) {
       const confirmUrl = `${FRONTEND}/confirmar.html?token=${encodeURIComponent(result.verificationToken)}`;
-      enviarEmailVerificacionInstructor({ email: result.user.email, nombre: result.user.nombre, confirmUrl })
+      const enviarVerificacion = result.user.role === 'INSTRUCTOR'
+        ? enviarEmailVerificacionInstructor
+        : enviarEmailVerificacionUsuario;
+      enviarVerificacion({ email: result.user.email, nombre: result.user.nombre, confirmUrl })
         .then(r => {
-          if (r?.fallback) console.error('[auth][reenviar] 🚫 SMTP mal configurado. Correo de confirmación NO reenviado a:', result.user.email);
+          if (r?.fallback) {
+            console.error('[auth][reenviar] 🚫 SMTP no configurado. Correo de confirmación NO reenviado a:', result.user.email);
+          } else if (!r?.ok) {
+            console.error('[auth][reenviar] 🚫 Correo de confirmación rechazado para:', result.user.email, '— Error:', r?.error);
+          } else {
+            console.log('[auth][reenviar] ✓ Correo de confirmación reenviado a:', result.user.email);
+          }
         })
         .catch(err => console.error('[auth][reenviar] 🚫 Error SMTP al reenviar verificación:', err.message));
     }
